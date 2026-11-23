@@ -30,7 +30,7 @@ const recommendations: DashboardData['recommendations'] = [
   { id: 'r5', category: 'Assessment Preparation', title: 'Review your assessment feedback', description: 'Use topic-level results to identify questions to revisit before your next assessment.', priority: 'low', action: 'Review incorrect answers and explain the correct approach in your own words.' },
 ];
 const dashboard: DashboardData = { profile, academicRecords: records, studySessions: sessions, assessmentResults: results, upcomingAssessments: assessments, prediction: null, recommendations, goals };
-export const emptyModelInfo: ModelInfo = { available: false, selectedModel: 'Not connected', target: 'Passing the next semester (target = 1); below 40% aggregate marks = 0', version: '', metrics: null, dataset: null, calibrated: false, trainedAt: '' };
+export const emptyModelInfo: ModelInfo = { available: false, selectedModel: 'Not connected', target: 'Pending verification: model target, class meanings and 17-feature engineering contract', version: '', metrics: null, dataset: null, calibrated: false, trainedAt: '' };
 export const reportCatalog: ReportCatalogItem[] = [
   { key: 'academic', title: 'Academic Performance', description: 'Semester results, SGPA, and subject marks.', available: true },
   { key: 'semester', title: 'Semester-wise Progress', description: 'Your academic progress across semesters.', available: true },
