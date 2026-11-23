@@ -36,10 +36,7 @@ fi
 sudo systemctl enable --now mysql
 sudo systemctl is-active --quiet mysql || fail "MySQL service did not start."
 
-if ! python3 -m venv --help >/dev/null 2>&1; then
-  sudo apt-get install -y python3-venv
-fi
-command -v openssl >/dev/null || fail "Install openssl to generate local secrets."
+sudo apt-get install -y python3-venv openssl curl
 
 DB_PASSWORD="$(openssl rand -hex 24)"
 JWT_SECRET="$(openssl rand -hex 48)"
