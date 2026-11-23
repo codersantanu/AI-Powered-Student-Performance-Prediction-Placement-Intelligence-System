@@ -1,6 +1,6 @@
 import { chromium, expect, test } from '@playwright/test';
 
-const baseUrl = process.env.TEST_URL || `http://localhost:${process.env.VITE_TEST_PORT || '5174'}`;
+const baseUrl = process.env.TEST_URL || `http://localhost:${process.env.VITE_TEST_PORT || '5173'}`;
 
 test('mocked authentication and server-role-based redirects', async () => {
   const browser = await chromium.launch({ args: ['--no-sandbox'] });
@@ -48,7 +48,7 @@ test('mocked authentication and server-role-based redirects', async () => {
     await expect(page.locator('.workspace-content h1')).toContainText('A little progress, every day');
     await page.locator('.sidebar-nav').getByRole('link', { name: 'Performance Prediction', exact: true }).click();
     await expect(page.locator('.workspace-content h1')).toContainText('Performance Prediction');
-    await expect(page.locator('.prediction-unavailable')).toContainText('not available yet');
+    await expect(page.getByRole('heading', { name: /model integration is being verified/i })).toBeVisible();
     expect(errors).toEqual([]);
     await expect(page.locator('.site-header')).toHaveCount(0);
   await expect(page.locator('.preview-banner')).not.toBeVisible();

@@ -9,9 +9,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(isBackendConfigured);
+  const [previewMode, setPreviewMode] = useState(() => {
+    if (new URLSearchParams(window.location.search).get('preview') === '1') return true;
+    try { return window.sessionStorage.getItem('studentiq-preview-mode') === '1'; } catch { return false; }
+  });
   const navigate = useNavigate();
-  const { search } = useLocation();
-  const isPreview = !user && new URLSearchParams(search).get('preview') === '1';
+  const { pathname, search } = useLocation();
+  const isPreview = !user && previewMode;
+  useEffect(() => {
+    if (user || ['/', '/login', '/register'].includes(pathname)) {
+      setPreviewMode(false);
+      try { window.sessionStorage.removeItem('studentiq-preview-mode'); } catch { /* Preview mode still works for this navigation. */ }
+      return;
+    }
+    if (new URLSearchParams(search).get('preview') === '1') {
+      setPreviewMode(true);
+      try { window.sessionStorage.setItem('studentiq-preview-mode', '1'); } catch { /* Keep preview navigation usable without storage. */ }
+    }
+  }, [pathname, search, user]);
   useEffect(() => {
     if (!isBackendConfigured) { setLoading(false); return; }
     let active = true;

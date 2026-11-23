@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Award, Bell, BookOpen, Brain, ChartNoAxesCombined, ChevronDown, ChevronRight, Clock3, Code2, FileText, GraduationCap, LayoutDashboard, Lightbulb, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Search, Settings2, Sun, UserRound, X } from 'lucide-react';
+import { Award, Bell, BookOpen, Brain, ChartNoAxesCombined, ChevronDown, ChevronRight, Clock3, Code2, FileText, GraduationCap, LayoutDashboard, Lightbulb, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Search, Settings2, Sun, UserRound, Users, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Brand from '../Brand';
 import { useAuth } from '../../context/AuthContext';
@@ -14,8 +14,9 @@ export const studentNavigation: { label: string; path: string; icon: LucideIcon 
   { label: 'My Profile', path: '/student/profile', icon: UserRound },
   { label: 'Academic Performance', path: '/student/academic-performance', icon: BookOpen },
   { label: 'Study Behaviour', path: '/student/study-behaviour', icon: Clock3 },
-  { label: 'Psychometric Assessment', path: '/student/psychometric-assessment', icon: Brain },
   { label: 'Technical Assessment', path: '/student/technical-assessment', icon: Code2 },
+  { label: 'Behavioural Assessment', path: '/student/behavioural-assessment', icon: Users },
+  { label: 'Psychometric Assessment', path: '/student/psychometric-assessment', icon: Brain },
   { label: 'Skills & Experience', path: '/student/skills-experience', icon: Award },
   { label: 'Performance Prediction', path: '/student/performance-prediction', icon: ChartNoAxesCombined },
   { label: 'Improvement Recommendations', path: '/student/improvement-recommendations', icon: Lightbulb },
@@ -25,7 +26,7 @@ export const adminNavigation: { label: string; path: string; icon: LucideIcon }[
   { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'Student Management', path: '/admin/students', icon: UserRound },
   { label: 'Academic Records', path: '/admin/academic-records', icon: BookOpen },
-  { label: 'Assessments & Questions', path: '/admin/assessments', icon: Brain },
+  { label: 'Assessment Publishing', path: '/admin/assessments', icon: Brain },
   { label: 'Reports & Analytics', path: '/admin/reports', icon: FileText },
 ];
 function initials(name: string) { return name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase(); }

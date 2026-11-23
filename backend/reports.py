@@ -8,9 +8,10 @@ from reportlab.lib.colors import HexColor
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from .extensions import db
-from .models import AcademicRecord, AssessmentAttempt, Prediction, Report, SkillEntry, StudyGoal, StudySession
+from .models import AcademicRecord, AssessmentAttempt, Prediction, Report, SkillEntry, StudyGoal, StudySession, User
 from .validation import ApiError, admin_required, student_required
 from .ml import model_info
+from .assessment_results import result_data_public
 
 reports_bp = Blueprint('reports', __name__)
 CATALOG = [
@@ -34,18 +35,18 @@ def report_data(user, key, semester):
     records = list(db.session.scalars(semester_filter(select(AcademicRecord).filter_by(student_id=user.id).order_by(AcademicRecord.id), semester)).all())
     attempts = db.session.scalars(select(AssessmentAttempt).filter(AssessmentAttempt.student_id == user.id, AssessmentAttempt.submitted_at.isnot(None))).all()
     predictions = list(db.session.scalars(select(Prediction).filter_by(student_id=user.id).order_by(Prediction.created_at.desc())).all())
-    record_rows = lambda: [{'semester': r.semester, 'academicYear': r.academicYear, 'SGPA': r.sgpa, 'attendance': r.attendance, 'classesAttended': r.classesAttended, 'totalClasses': r.totalClasses, 'activeBacklogs': r.activeBacklogs, 'clearedBacklogs': r.clearedBacklogs, 'subjects': r.subjects} for r in records]
+    record_rows = lambda: [{'semester': r.semester, 'academicYear': r.academic_year, 'SGPA': r.sgpa, 'attendance': r.attendance, 'classesAttended': r.classes_attended, 'totalClasses': r.total_classes, 'activeBacklogs': r.active_backlogs, 'clearedBacklogs': r.cleared_backlogs, 'subjects': r.subjects} for r in records]
     if key == 'academic':
         return {'student': user.name, 'records': record_rows()}
     if key == 'semester':
-        return {'semesters': [{'semester': r.semester, 'SGPA': r.sgpa, 'academicYear': r.academicYear} for r in records]}
+        return {'semesters': [{'semester': r.semester, 'SGPA': r.sgpa, 'academicYear': r.academic_year} for r in records]}
     if key == 'attendance':
-        return {'records': [{'semester': r.semester, 'attendance': r.attendance, 'classesAttended': r.classesAttended, 'totalClasses': r.totalClasses} for r in records]}
+        return {'records': [{'semester': r.semester, 'attendance': r.attendance, 'classesAttended': r.classes_attended, 'totalClasses': r.total_classes} for r in records]}
     if key == 'study':
         sessions = list(db.session.scalars(select(StudySession).filter_by(student_id=user.id).order_by(StudySession.date)).all())
         return {'sessions': [{'subject': s.subject, 'date': s.date, 'hours': s.duration, 'notes': s.notes} for s in sessions], 'totalHours': sum(s.duration for s in sessions)}
     if key in ['psychometric', 'technical']:
-        return {'results': [{'title': a.assessment.title, 'date': a.submitted_at.isoformat(), **a.result} for a in attempts if (a.assessment.category == 'Psychometric') == (key == 'psychometric')]}
+        return {'results': [{'title': a.assessment.title, 'date': a.submitted_at.isoformat(), **result_data_public(a.result)} for a in attempts if (a.assessment.category == 'Psychometric') == (key == 'psychometric')]}
     if key == 'prediction':
         if not model_info()['available']:
             raise ApiError('A trained model is not connected. Prediction reports are not available yet.', 404)
@@ -54,7 +55,7 @@ def report_data(user, key, semester):
         sessions = list(db.session.scalars(select(StudySession).filter_by(student_id=user.id)).all())
         skills = list(db.session.scalars(select(SkillEntry).filter_by(student_id=user.id)).all())
         goals = list(db.session.scalars(select(StudyGoal).filter_by(student_id=user.id)).all())
-        return {'student': user.profile.public(), 'latestRecords': record_rows()[-1:], 'studyHours': sum(s.duration for s in sessions), 'assessments': [{'title': a.assessment.title, 'date': a.submitted_at.isoformat(), **a.result} for a in attempts], 'skills': [{'title': s.title, 'category': s.category, 'level': s.level} for s in skills], 'goals': [{'title': g.title, 'target': g.target, 'completed': g.completed} for g in goals]}
+        return {'student': user.profile.public(), 'latestRecords': record_rows()[-1:], 'studyHours': sum(s.duration for s in sessions), 'assessments': [{'title': a.assessment.title, 'date': a.submitted_at.isoformat(), **result_data_public(a.result)} for a in attempts], 'skills': [{'title': s.title, 'category': s.category, 'level': s.level} for s in skills], 'goals': [{'title': g.title, 'target': g.target, 'completed': g.completed} for g in goals]}
     raise ApiError('Report category not found.', 404)
 
 
@@ -144,5 +145,5 @@ def institution_download(user):
     query = select(AcademicRecord, User.name).join(User, User.id == AcademicRecord.student_id)
     if semester:
         query = query.where(AcademicRecord.semester == semester)
-    rows = [{'student': name, 'semester': r.semester, 'SGPA': r.sgpa, 'attendance': r.attendance, 'activeBacklogs': r.activeBacklogs} for r, name in db.session.execute(query.order_by(AcademicRecord.id)).all()]
+    rows = [{'student': name, 'semester': r.semester, 'SGPA': r.sgpa, 'attendance': r.attendance, 'activeBacklogs': r.active_backlogs} for r, name in db.session.execute(query.order_by(AcademicRecord.id)).all()]
     return send_file(render_pdf('Institution Academic Analytics', 'Authorized administrator', semester, {'records': rows}), mimetype='application/pdf', as_attachment=True, download_name='StudentIQ-institution-report.pdf')

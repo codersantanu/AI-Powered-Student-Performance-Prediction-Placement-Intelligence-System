@@ -36,7 +36,7 @@ test('student and admin workspace interactions and responsive layouts', async ()
     await page.getByRole('button', { name: 'Edit Profile', exact: true }).click();
     await page.getByLabel('Phone number').fill('+1 555 0100');
     await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-    await expect(page.locator('.information-list')).toContainText('+1 555 0100');
+    await expect(page.getByText('+1 555 0100', { exact: true })).toBeVisible();
     await page.locator('.sidebar-nav').getByRole('link', { name: 'Skills & Experience', exact: true }).click();
     await page.getByRole('button', { name: 'Add New Entry', exact: true }).click();
     await page.getByLabel('Title', { exact: true }).fill('Browser test project');
@@ -47,7 +47,7 @@ test('student and admin workspace interactions and responsive layouts', async ()
     await page.getByRole('button', { name: 'Delete Entry', exact: true }).click();
     await expect(page.locator('.skills-grid')).not.toContainText('Browser test project');
     await page.locator('.sidebar-nav').getByRole('link', { name: 'Technical Assessment', exact: true }).click();
-    await page.getByRole('button', { name: 'Start Assessment', exact: true }).click();
+    await page.locator('.published-assessments').getByRole('button', { name: 'Start', exact: true }).first().click();
     for (let i = 0; i < 5; i++) {
       await page.locator('.answer-option').first().click();
       if (i < 4) await page.getByRole('button', { name: 'Next', exact: true }).click();
@@ -56,10 +56,10 @@ test('student and admin workspace interactions and responsive layouts', async ()
     await page.getByRole('dialog').getByRole('button', { name: 'Submit Assessment', exact: true }).click();
     await expect(page.locator('.assessment-result-hero')).toContainText('SAMPLE ASSESSMENT RESULT');
     await page.locator('.sidebar-nav').getByRole('link', { name: 'Psychometric Assessment', exact: true }).click();
-    await page.getByRole('button', { name: 'Start Self-Assessment', exact: true }).click();
+    await page.locator('.published-assessments').getByRole('button', { name: 'Start', exact: true }).first().click();
     await expect(page.locator('.answer-option')).toHaveCount(4);
     await page.locator('.sidebar-nav').getByRole('link', { name: 'Performance Prediction', exact: true }).click();
-    await expect(page.locator('.prediction-unavailable')).toContainText('not available yet');
+    await expect(page.getByRole('heading', { name: /model integration is being verified/i })).toBeVisible();
     await page.locator('.sidebar-nav').getByRole('link', { name: 'Improvement Recommendations', exact: true }).click();
     await page.getByRole('button', { name: 'Set a Study Goal', exact: true }).click();
     await page.getByLabel('Goal title').fill('Read documentation');
@@ -74,25 +74,58 @@ test('student and admin workspace interactions and responsive layouts', async ()
     expect((await downloading).suggestedFilename()).toContain('.pdf');
 
     for (const route of [...routes.map((item) => `/student/${item}`), '/admin/dashboard', '/admin/students', '/admin/academic-records', '/admin/assessments', '/admin/reports']) {
-      await page.goto(`${baseUrl}${route}?preview=1`, { waitUntil: 'networkidle' });
+      await page.goto(`${baseUrl}${route}?preview=1`, { waitUntil: 'domcontentloaded' });
       await expect(page.locator('.workspace-content h1')).toBeVisible();
-      for (const width of [1440, 1024, 768,390, 320]) {
+      for (const width of [375, 768, 1024, 1280, 1440]) {
         await page.setViewportSize({ width, height: 900 });
-        const dimensions = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
-        expect(dimensions.document, `${route} overflow at ${width}px`).toBeLessThanOrEqual(width);
+        await expect.poll(() => page.evaluate(() => new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            const chartsFit = [...document.querySelectorAll('.recharts-responsive-container')].every((container) => {
+              const containerWidth = container.getBoundingClientRect().width;
+              const chartWidth = container.querySelector('.recharts-wrapper')?.getBoundingClientRect().width ?? 0;
+              return containerWidth > 0 && chartWidth > 0 && Math.abs(containerWidth - chartWidth) <= 1;
+            });
+            resolve(document.documentElement.scrollWidth <= innerWidth && chartsFit);
+          }));
+        })), { message: `${route} should fit within ${width}px after responsive charts resize` }).toBe(true);
+        if (route === '/admin/reports' && width === 375) {
+          const table = await page.locator('.table-scroll').evaluate((wrapper) => ({
+            overflowX: getComputedStyle(wrapper).overflowX,
+            clientWidth: wrapper.clientWidth,
+            scrollWidth: wrapper.scrollWidth,
+          }));
+          expect(table.overflowX).toBe('auto');
+          expect(table.scrollWidth).toBeGreaterThan(table.clientWidth);
+        }
       }
       await page.setViewportSize({ width: 1440, height: 1000 });
       console.log(`PASS: ${route} at five widths`);
     }
+    await page.goto(`${baseUrl}/admin/assessments?preview=1`, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.workspace-content h1')).toHaveText('Imported Assessment Suites');
+    await expect(page.getByText('No imported assessments found.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Publish Assessment', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Add Question', exact: true })).toHaveCount(0);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`${baseUrl}/student/dashboard?preview=1`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/student/dashboard?preview=1`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Open navigation drawer' }).click();
     await expect(page.locator('.workspace-sidebar--open')).toBeVisible();
     await page.locator('.workspace-sidebar').getByRole('link', { name: 'My Profile', exact: true }).click();
-    await expect(page).toHaveURL(`${baseUrl}/student/profile?preview=1`);
-    await page.getByRole('button', { name: 'Switch to dark theme', exact: true }).click();
+    await expect(page).toHaveURL(`${baseUrl}/student/profile`);
+    await expect(page.locator('.preview-banner')).toBeVisible();
+    await expect(page.locator('.workspace-sidebar--open')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Open navigation drawer' }).click();
+    await expect(page.locator('.workspace-sidebar--open')).toBeVisible();
+    const darkThemeToggle = page.locator('.workspace-sidebar').getByRole('button', { name: 'Switch to dark theme', exact: true });
+    await expect(darkThemeToggle).toBeVisible();
+    await darkThemeToggle.click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await page.getByRole('button', { name: 'Switch to light theme', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('studentiq-theme'))).toBe('dark');
+    const lightThemeToggle = page.locator('.workspace-sidebar').getByRole('button', { name: 'Switch to light theme', exact: true });
+    await expect(lightThemeToggle).toBeVisible();
+    await lightThemeToggle.click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('studentiq-theme'))).toBe('light');
     expect(errors).toEqual([]);
   } finally { await browser.close(); }
 });

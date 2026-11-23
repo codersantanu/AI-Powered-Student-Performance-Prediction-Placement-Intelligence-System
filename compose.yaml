@@ -1,19 +1,24 @@
+# Optional containerized MySQL alternative.
+# The recommended Ubuntu setup uses the native mysql.service and localhost:3306.
+# This optional profile maps container port 3306 to host port 3307 to avoid conflicts.
 services:
   db:
-    image: postgres:17
+    image: mysql:8.4
+    profiles: ["docker-db"]
     restart: unless-stopped
     environment:
-      POSTGRES_DB: studentiq
-      POSTGRES_USER: studentiq
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local .env}
+      MYSQL_DATABASE: Student_Performance_Prediction
+      MYSQL_USER: studentiq_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in your local .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in your local .env}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:3307:3306"
     volumes:
-      - studentiq_pgdata:/var/lib/postgresql/data
+      - studentiq_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U studentiq -d studentiq"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 volumes:
-  studentiq_pgdata:
+  studentiq_mysql_data:

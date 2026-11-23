@@ -1,12 +1,24 @@
 import pytest
+from sqlalchemy import inspect
 from backend import create_app
 from backend.extensions import db
+
+
+def test_app_factory_does_not_create_database_schema():
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+        'JWT_SECRET_KEY': 'test-only-secret-key-with-more-than-32-characters',
+    })
+    with app.app_context():
+        assert inspect(db.engine).get_table_names() == []
 
 
 @pytest.fixture()
 def app():
     app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite://', 'JWT_SECRET_KEY': 'test-only-secret-key-with-more-than-32-characters'})
     with app.app_context():
+        db.create_all()
         yield app
         db.session.remove()
         db.drop_all()
@@ -102,7 +114,7 @@ def test_study_session_crud_and_ownership(client, app):
 def test_technical_assessment_server_scoring(client, app):
     register(client)
     headers = auth_header(login(client))
-    from backend.models import Assessment, Question
+    from backend.models import Assessment, AssessmentAttempt, Question
     question = Question(text='2 + 3 * 4 = ?', options=['20', '14', '24', '9'], correct_index=1, category='Python', difficulty='Basic', explanation='Multiply before adding.')
     db.session.add(question)
     db.session.commit()
@@ -122,6 +134,29 @@ def test_technical_assessment_server_scoring(client, app):
     assert result.status_code == 200
     assert result.get_json()['score'] == 100
     assert result.get_json()['correct'] == 1
+    assert 'correctAnswer' not in result.get_json()['review'][0]
+    assert 'explanation' not in result.get_json()['review'][0]
+    assert result.get_json()['review'][0]['correct'] is None
+
+    attempt = db.session.get(AssessmentAttempt, body['id'])
+    legacy_result = dict(attempt.result)
+    legacy_result['review'] = [{
+        'question': 'Legacy question',
+        'selected': 'Selected option',
+        'correctAnswer': 'Private answer',
+        'correctIndex': 1,
+        'explanation': 'Private explanation',
+        'correct': True,
+    }]
+    attempt.result = legacy_result
+    db.session.commit()
+    history = client.get('/api/assessments/results', headers=headers).get_json()[0]
+    assert 'correctAnswer' not in history['review'][0]
+    assert 'correctIndex' not in history['review'][0]
+    assert 'explanation' not in history['review'][0]
+    assert history['review'][0]['correct'] is None
+    report = client.get('/api/student/reports/technical', headers=headers).get_json()
+    assert 'correctAnswer' not in report['data']['results'][0]['review'][0]
 
 
 def test_prediction_unavailable_without_model(client, monkeypatch):
@@ -147,3 +182,49 @@ def test_reports_use_real_records(client):
     assert pdf.status_code == 200
     assert pdf.mimetype == 'application/pdf'
     assert len(client.get('/api/student/reports/history', headers=headers).get_json()) == 1
+
+
+def test_academic_records_use_frontend_field_names_and_populated_reports(client, app):
+    student_id = register(client).get_json()['user']['id']
+    student_headers = auth_header(login(client))
+    make_admin(app)
+    admin_headers = auth_header(login(client, 'admin@example.com', 'AdminPassword123!'))
+
+    created = client.post(
+        '/api/admin/academic-records',
+        headers=admin_headers,
+        json={
+            'studentId': student_id,
+            'semester': 2,
+            'academicYear': '2025-2026',
+            'sgpa': 8.25,
+            'attendance': 90,
+            'classesAttended': 45,
+            'totalClasses': 50,
+            'activeBacklogs': 0,
+            'clearedBacklogs': 1,
+            'class10': 88,
+            'class12': 91,
+            'subjects': [],
+        },
+    )
+    assert created.status_code == 201
+    assert created.get_json()['academicYear'] == '2025-2026'
+    assert 'academic_year' not in created.get_json()
+
+    student_records = client.get('/api/student/academic-records', headers=student_headers)
+    assert student_records.status_code == 200
+    assert student_records.get_json()[0]['classesAttended'] == 45
+    assert student_records.get_json()[0]['activeBacklogs'] == 0
+
+    report = client.get('/api/student/reports/academic', headers=student_headers)
+    assert report.status_code == 200
+    assert report.get_json()['data']['records'][0]['academicYear'] == '2025-2026'
+    semester_report = client.get('/api/student/reports/semester', headers=student_headers)
+    assert semester_report.status_code == 200
+    assert semester_report.get_json()['data']['semesters'][0]['academicYear'] == '2025-2026'
+    attendance_report = client.get('/api/student/reports/attendance', headers=student_headers)
+    assert attendance_report.status_code == 200
+    assert attendance_report.get_json()['data']['records'][0]['classesAttended'] == 45
+    assert client.get('/api/admin/reports/download', headers=admin_headers).status_code == 200
+    assert client.get('/api/student/reports/academic/download', headers=student_headers).mimetype == 'application/pdf'

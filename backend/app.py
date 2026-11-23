@@ -1,10 +1,11 @@
 import click
+from pathlib import Path
 from dotenv import load_dotenv
 from . import create_app
 from .extensions import db
 from .models import User
 
-load_dotenv()
+load_dotenv(Path(__file__).with_name('.env'))
 app = create_app()
 
 
@@ -27,4 +28,4 @@ def create_admin(name, email, password):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='127.0.0.1', port=5000, debug=False)

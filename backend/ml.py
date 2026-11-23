@@ -29,7 +29,7 @@ def load_model():
 def model_info():
     artifact = load_model()
     if not artifact:
-        return {'available': False, 'selectedModel': 'Not connected', 'target': 'Passing the next semester: aggregate marks below 40% are labeled 0; 40% or above are labeled 1.', 'version': '', 'metrics': None, 'dataset': None, 'calibrated': False, 'trainedAt': ''}
+        return {'available': False, 'selectedModel': 'Not connected', 'target': 'Pending verification: confirm the supplied model training target, class meanings and 17-feature engineering contract before predictions are enabled.', 'version': '', 'metrics': None, 'dataset': None, 'calibrated': False, 'trainedAt': ''}
     return {'available': True, 'selectedModel': artifact['selectedModel'], 'target': artifact['target'], 'version': artifact['version'], 'metrics': artifact['metrics'], 'dataset': artifact['dataset'], 'calibrated': bool(artifact['calibrated']), 'trainedAt': artifact['trainedAt']}
 
 
