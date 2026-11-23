@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS psy_student_responses (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     attempt_id BIGINT NOT NULL,
     question_id INT NOT NULL,
-    selected_option_id INT NOT NULL,
+    selected_option_id INT NULL,
     answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_psy_response_attempt
         FOREIGN KEY (attempt_id) REFERENCES psy_assessment_attempts(id),
