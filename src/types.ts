@@ -21,3 +21,5 @@ export interface ReportCatalogItem { key: string; title: string; description: st
 export interface AdminStudent { id: number; name: string; email: string; studentId: string; department: string; academicYear: string; currentSemester: number; cgpa: number | null; attendance: number | null; active: boolean; }
 export interface AdminQuestion { id: number; text: string; options: string[]; correctIndex: number; category: string; difficulty: string; explanation: string; }
 export interface AdminOverview { students: number; activeStudents: number; averageCgpa: number | null; averageAttendance: number | null; records: number; assessments: number; predictions: number; }
+
+export interface ImportedAssessment { kind: 'technical' | 'behavioural' | 'psychometric'; id: number; title: string; published: boolean; }
