@@ -9,7 +9,11 @@
 - React/Vite runs on `127.0.0.1:5173` and calls Flask over HTTP. The browser must never connect directly to MySQL.
 - MySQL manages its storage files under its configured data directory (commonly `/var/lib/mysql/`). Do not edit those files manually.
 
-## Safe setup order
+## Recommended automated setup
+
+From the repository root, run `bash scripts/setup_ubuntu.sh`. It installs/starts MySQL Server, creates the database and least-privilege account, installs dependencies, creates the Flask base schema and imports all three assessment suites. Then run `bash scripts/start_dev.sh` to start Flask and React together. The script does not drop the database. See the root README for details.
+
+## Manual safe setup order
 
 1. Install/start the native service: `sudo apt update && sudo apt install mysql-server && sudo systemctl enable --now mysql`.
 2. Open Workbench and connect to host `127.0.0.1`, port `3306`, with an administrative account.
@@ -27,7 +31,7 @@
 - Technical tables use `tech_` prefixes because the existing Flask ORM already has generic `assessments`, `questions`, and attempt/result tables.
 - Behavioural and psychometric scripts retain their `beh_` and `psy_` table prefixes.
 - The uploaded source SQL referenced `student_profiles.profile_id`; the current project model uses `student_profiles.id`. Foreign keys in these project copies target `id`.
-- Back up the database and review SQL before making schema changes. The imports create and seed the custom assessment tables, but do not by themselves connect all three modules to the student-facing API.
+- Back up the database and review SQL before making schema changes. The repository includes student-facing APIs for all three imported suites, with technical answer-key scoring and behavioural/psychometric dimension summaries. The administrator must publish each suite before students can start it.
 
 ## Ubuntu checks
 
