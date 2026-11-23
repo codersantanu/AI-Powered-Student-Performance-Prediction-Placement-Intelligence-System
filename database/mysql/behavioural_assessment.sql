@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS beh_student_responses (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     attempt_id BIGINT NOT NULL,
     question_id VARCHAR(10) NOT NULL,
-    selected_option_id VARCHAR(15) NOT NULL,
+    selected_option_id VARCHAR(15) NULL,
     answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_beh_response_attempt
         FOREIGN KEY (attempt_id) REFERENCES beh_assessment_attempts(id),
