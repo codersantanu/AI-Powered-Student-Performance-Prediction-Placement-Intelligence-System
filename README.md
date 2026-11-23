@@ -27,53 +27,36 @@ MySQL data directory (Ubuntu default: /var/lib/mysql/)
 - React never connects directly to MySQL; browser clients must only call the Flask API.
 - The database engine manages its storage files under its configured data directory. Do not edit files in `/var/lib/mysql/` manually.
 
-## Ubuntu setup
+## One-command Ubuntu setup (recommended)
 
-1. Install/start MySQL Server and open Workbench:
+From the repository root on Ubuntu, run:
 
-   ```bash
-   sudo apt update
-   sudo apt install mysql-server
-   sudo systemctl enable --now mysql
-   sudo systemctl status mysql
-   ```
+```bash
+bash scripts/setup_ubuntu.sh
+```
 
-2. In MySQL Workbench, connect to `127.0.0.1`, port `3306`, using an administrative account. Run `database/mysql/00_create_database.sql`, then edit and run `database/mysql/01_create_app_user.sql` to create the least-privilege application user.
+The setup script installs/starts MySQL Server if needed, creates the `Student_Performance_Prediction` database and a dedicated application account, generates local secrets, creates a Python virtual environment, installs backend/frontend dependencies, creates the Flask base tables, and imports all three safe assessment SQL files. It then offers to create your first administrator account.
 
-3. Create a Python virtual environment and install backend dependencies:
+The script is designed for a fresh local StudentIQ setup. It backs up an existing `backend/.env` before writing a new one. It does **not** drop the database or its tables. The assessment imports use `CREATE TABLE IF NOT EXISTS` and `INSERT IGNORE` to preserve existing rows.
 
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r backend/requirements.txt
-   ```
+Start both development servers:
 
-4. Copy `backend/.env.example` to `backend/.env`. Set a new JWT secret and the MySQL connection string:
+```bash
+bash scripts/start_dev.sh
+```
 
-   ```env
-   DATABASE_URL=mysql+pymysql://studentiq_app:YOUR_PASSWORD@127.0.0.1:3306/Student_Performance_Prediction?charset=utf8mb4
-   JWT_SECRET_KEY=YOUR_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS
-   CORS_ORIGINS=http://localhost:5173,http://localhost:4173
-   ```
+Open `http://127.0.0.1:5173`. Flask health is available at `http://127.0.0.1:5000/api/health`. To stop the services, press Ctrl+C in that terminal.
 
-   URL-encode special characters in the database password.
+### MySQL Workbench connection
 
-5. Start Flask once so SQLAlchemy creates the app's base tables, including `users` and `student_profiles`:
+```text
+Connection method: Standard TCP/IP
+Hostname:          127.0.0.1
+Port:              3306
+Username:          studentiq_app
+```
 
-   ```bash
-   python -m backend.app
-   ```
-
-6. Run the assessment imports in Workbench after the base tables exist. The source SQL was adapted to the real `student_profiles.id` primary key; technical table names use the `tech_` prefix to avoid the existing generic Flask tables. Review each SQL script and back up the database before applying it.
-
-7. In another terminal, start the frontend:
-
-   ```bash
-   npm install
-   VITE_API_URL=http://localhost:5000/api npm run dev
-   ```
-
-   Open `http://localhost:5173`.
+Use the generated password stored in the private `backend/.env` file. Do not commit that file or share its contents. Workbench is only the database client; MySQL Server continues running as Ubuntu's `mysql.service`.
 
 ## Useful MySQL checks
 
@@ -121,9 +104,17 @@ A candidate Random Forest pickle was supplied separately. Its serialized metadat
 
 The existing prediction API uses a different eight-feature contract. Four features in the supplied model are engineered values, and the original training notebook/script is needed to reproduce their formulas exactly. Until that feature engineering and target-label meaning are confirmed, the API must not generate a prediction by guessing formulas or reporting invented model metrics.
 
-## Assessment integration status
+## Three integrated assessment types
 
-The project includes the existing generic assessment API and the supplied technical, behavioural and psychometric SQL designs. The SQL imports must be applied after the base Flask tables exist. The specialised behavioural and psychometric score interpretation still needs to be connected to student-facing endpoints and the frontend before those two tests are fully live.
+The specialised assessment API and frontend routes are included for all three supplied question banks:
+
+- Technical: 20 MCQs with the uploaded answer key, negative marking, performance bands and category-wise results.
+- Behavioural: 15 scenarios, 8 dimensions, option interpretations and dimension score summaries.
+- Psychometric: 15 scenarios, 5 dimensions, option interpretations and dimension score summaries.
+
+Students use the three separate assessment pages. Administrators can publish/unpublish imported suites from Admin → Assessments. Correct-answer keys and dimension mappings are kept server-side and are not sent before a student submits. Behavioural and psychometric results are reflective summaries, not clinically validated tests or diagnoses.
+
+The SQL suites must be imported after the Flask base tables are created. The quick-start script performs this in the correct order.
 
 ## Production checklist
 
