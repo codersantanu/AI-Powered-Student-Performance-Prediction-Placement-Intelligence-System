@@ -1,4 +1,4 @@
-# StudentIQ — Complete workspace implementation
+# StudentIQ — Implementation status (local MySQL branch)
 
 ## Existing project inspected
 
@@ -23,12 +23,18 @@ The supplied project contained React 19, TypeScript, Vite, Tailwind 4, and a lan
 - `src/utils/reports.ts`: browser-generated PDFs for actual fetched records or watermarked sample previews.
 - `src/dashboard.css`, `src/types.ts`, `src/vite-env.d.ts`: dashboard design system, responsive layouts, dark mode, shared types, and environment definitions.
 
+## Selected database architecture
+
+Production/local development database is MySQL 8 on Ubuntu. The flow is Browser/React (:5173) → Flask API (:5000) → MySQL Server (`mysqld`, `127.0.0.1:3306`) → MySQL-managed storage (normally `/var/lib/mysql/`). Workbench is the database client, not the server. The frontend does not access MySQL directly.
+
+The database name is `Student_Performance_Prediction`. Flask uses `mysql+pymysql://` and a dedicated app account. SQLite remains limited to isolated backend tests. See `database/mysql/README.md`.
+
 ## Added backend — requires deployment/configuration
 
 All Python files are new; no existing backend was overwritten.
 
 - `backend/__init__.py`: Flask application factory, JWT verification, database/API error handling, and blueprints.
-- `backend/extensions.py`, `models.py`: Flask-SQLAlchemy and PostgreSQL-oriented models.
+- `backend/extensions.py`, `models.py`: Flask-SQLAlchemy and MySQL-compatible SQLAlchemy models.
 - `backend/validation.py`: input validation and ownership/role checks.
 - `backend/auth.py`: registration, login, session restoration, current user, and logout.
 - `backend/student.py`: profile, academic records, dashboard, study-session CRUD, portfolio CRUD, goals, and semester list.
@@ -40,7 +46,7 @@ All Python files are new; no existing backend was overwritten.
 - `backend/reports.py`: eight report categories, report history, and institution/student PDF generation using the stored data.
 - `backend/app.py`, `wsgi.py`, `requirements.txt`, `.env.example`: deployment entry points and dependencies.
 - `backend/tests/test_api.py`: isolated SQLite tests for API behavior. SQLite is used only for tests, not as the production database.
-- `compose.yaml`: local PostgreSQL 17 service. A local database password must be supplied through the environment.
+- `compose.yaml`: optional MySQL 8.4 container profile on host port 3307; the recommended Ubuntu setup is the native `mysql.service` on port 3306.
 
 ## API endpoints implemented in source
 
@@ -86,7 +92,7 @@ The frontend uses `/api` by default. Set `VITE_API_URL` to the deployed Flask AP
 | GET | `/api/admin/reports/download` | Authorized institution PDF |
 | GET | `/api/health` | API health |
 
-**Deployment status:** source integrations and backend routes are provided, but no Flask service or PostgreSQL database is running in this frontend sandbox. The live end-to-end account flow cannot be verified without deploying those services. Preview mode does not contact or bypass real authentication.
+**Deployment status:** source integrations and backend routes are provided, but no Flask service or MySQL database is running in this frontend sandbox. The live end-to-end account flow cannot be verified without deploying those services. Preview mode does not contact or bypass real authentication.
 
 ## Run the frontend
 
@@ -99,27 +105,28 @@ Without `VITE_API_URL`, protected routes redirect to Login. Explicit sample prev
 ## Run the backend
 
 1. Use Python 3.11+ and create a virtual environment.
-2. Install `backend/requirements.txt`.
-3. Set `DATABASE_URL`, a strong `JWT_SECRET_KEY`, and allowed `CORS_ORIGINS` in the backend environment. See `backend/.env.example`.
-4. Start PostgreSQL, for example with `docker compose up -d db` after setting `POSTGRES_PASSWORD`.
-5. Run `flask --app backend.wsgi db upgrade` after generating/reviewing the initial migration. The application can create tables for a fresh database, but production schema changes should use reviewed migrations.
-6. Start `python -m backend.app`.
-7. Set the frontend `VITE_API_URL=http://localhost:5000/api` and restart Vite.
-8. Create the first admin using a trusted database/bootstrap process, not a public registration role selector.
+2. Install `backend/requirements.txt` (includes PyMySQL and pins scikit-learn 1.6.1 for the supplied model compatibility target).
+3. Install/start Ubuntu MySQL Server: `sudo apt install mysql-server && sudo systemctl enable --now mysql`.
+4. In MySQL Workbench, connect to `127.0.0.1:3306`; run `database/mysql/00_create_database.sql`, then edit and run `database/mysql/01_create_app_user.sql`.
+5. Copy `backend/.env.example` to `backend/.env`; set the MySQL `DATABASE_URL`, `JWT_SECRET_KEY`, and `CORS_ORIGINS`.
+6. Start `python -m backend.app` once so SQLAlchemy creates `users`, `student_profiles`, and the other base models. The app currently calls `db.create_all()`; use reviewed Alembic migrations for future production schema changes.
+7. Run `database/mysql/technical_assessment.sql`, `behavioural_assessment.sql`, and `psychometric_assessment.sql` in Workbench after `student_profiles` exists.
+8. Start the frontend with `VITE_API_URL=http://localhost:5000/api npm run dev`.
+9. Provision the first admin through the trusted CLI command `flask --app backend.app create-admin`, not a public registration role selector.
 
 The backend defaults to bearer tokens retained in frontend memory. For stronger browser-session security, use `JWT_AUTH_MODE=cookie`, HTTPS, and the HttpOnly JWT cookie plus CSRF protection. The frontend supports both modes. Do not store passwords or JWTs in localStorage.
 
-## Train a real model
+## Supplied ML pickle — pending feature-contract verification
 
-No dataset or trained model was supplied. Do not invent one.
+A candidate `RandomForestClassifier` pickle was supplied separately. Static pickle inspection identified the following ordered model features:
 
-1. Prepare a consented real CSV with `previousMarks`, `currentMarks`, `sgpa`, `cgpa`, `attendance`, `studyHours`, `backlogs`, `assessmentScore`, and verified binary `next_semester_pass` labels.
-2. Include `student_id` to prevent student leakage across training/validation/test partitions.
-3. Run `python -m backend.train_model.py /path/to/real.csv artifacts/studentiq_model.joblib`.
-4. Set `MODEL_PATH` to that artifact and restart the backend.
-5. Inspect the actual held-out metrics and dataset provenance in the prediction module.
+`class10marks`, `class12marks`, `sem1`, `sem2`, `sem3`, `sem4`, `sem5`, `sem6`, `sem7`, `sem8`, `techtest`, `behavioraltest`, `psycotest`, `cgpa_std`, `academic_slope`, `schooling_avg`, `tech_to_behavioral_ratio`.
 
-The program refuses insufficient or invalid datasets. It does not manufacture synthetic students or fake metrics. Predictions concern the defined next-semester pass target; they are supportive estimates, not judgments of ability.
+The recorded scikit-learn version is 1.6.1 and `backend/requirements.txt` now pins that exact version. The pickle has not been unpickled or run yet. Do not load pickle files from untrusted sources; unpickling can execute arbitrary code.
+
+The existing prediction API still has a different eight-field input contract. The last four model features are engineered values. The exact formulas, missing-semester handling, zero-denominator handling, target class meanings, and output interpretation must come from the original training notebook or Python script. Do not guess these rules and do not expose model metrics until they are actually obtained from a verified evaluation artifact. Once the training code is available, add a small parity test comparing the web API feature vector with the feature vector used during training.
+
+The earlier `train_model.py` is for a different eight-feature demonstration contract and is not the correct way to retrain this supplied 17-feature model.
 
 ## Test the complete flow
 
