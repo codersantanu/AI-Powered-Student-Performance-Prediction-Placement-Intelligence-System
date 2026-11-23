@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 from backend.special_assessments import normalise_dimension_scores
 
