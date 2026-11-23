@@ -91,6 +91,4 @@ def create_app(config=None):
     def remove_session(exception=None):
         db.session.remove()
 
-    with app.app_context():
-        db.create_all()
     return app

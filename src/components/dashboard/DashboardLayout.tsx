@@ -26,7 +26,7 @@ export const adminNavigation: { label: string; path: string; icon: LucideIcon }[
   { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'Student Management', path: '/admin/students', icon: UserRound },
   { label: 'Academic Records', path: '/admin/academic-records', icon: BookOpen },
-  { label: 'Assessments & Questions', path: '/admin/assessments', icon: Brain },
+  { label: 'Assessment Publishing', path: '/admin/assessments', icon: Brain },
   { label: 'Reports & Analytics', path: '/admin/reports', icon: FileText },
 ];
 function initials(name: string) { return name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase(); }

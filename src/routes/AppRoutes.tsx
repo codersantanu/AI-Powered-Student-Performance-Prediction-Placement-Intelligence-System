@@ -40,9 +40,9 @@ export default function AppRoutes() {
     <Route path="/student/profile" element={<Protected role="student"><Profile /></Protected>} />
     <Route path="/student/academic-performance" element={<Protected role="student"><AcademicPerformance /></Protected>} />
     <Route path="/student/study-behaviour" element={<Protected role="student"><StudyBehaviour /></Protected>} />
-    <Route path="/student/technical-assessment" element={<Protected role="student"><Assessments kind="technical" /></Protected>} />
-    <Route path="/student/behavioural-assessment" element={<Protected role="student"><Assessments kind="behavioural" /></Protected>} />
-    <Route path="/student/psychometric-assessment" element={<Protected role="student"><Assessments kind="psychometric" /></Protected>} />
+    <Route path="/student/technical-assessment" element={<Protected role="student"><Assessments key="technical" kind="technical" /></Protected>} />
+    <Route path="/student/behavioural-assessment" element={<Protected role="student"><Assessments key="behavioural" kind="behavioural" /></Protected>} />
+    <Route path="/student/psychometric-assessment" element={<Protected role="student"><Assessments key="psychometric" kind="psychometric" /></Protected>} />
     <Route path="/student/skills-experience" element={<Protected role="student"><SkillsExperience /></Protected>} />
     <Route path="/student/performance-prediction" element={<Protected role="student"><PerformancePrediction /></Protected>} />
     <Route path="/student/improvement-recommendations" element={<Protected role="student"><ImprovementRecommendations /></Protected>} />

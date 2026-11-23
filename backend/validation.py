@@ -143,7 +143,12 @@ def owned(model, student_id, record_id):
 
 
 def record_public(record):
-    result = {column.name: getattr(record, column.name) for column in record.__table__.columns}
-    if 'student_id' in result:
-        result['studentName'] = db.session.get(User, result['student_id']).name
+    result = {
+        re.sub(r'_([a-z])', lambda match: match.group(1).upper(), column.name): getattr(record, column.name)
+        for column in record.__table__.columns
+    }
+    if 'studentId' in result:
+        student = db.session.get(User, result['studentId'])
+        if student:
+            result['studentName'] = student.name
     return result

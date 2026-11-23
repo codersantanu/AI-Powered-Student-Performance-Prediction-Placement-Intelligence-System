@@ -11,7 +11,7 @@
 
 ## Recommended automated setup
 
-From the repository root, run `bash scripts/setup_ubuntu.sh`. It installs/starts MySQL Server, creates the database and least-privilege account, installs dependencies, creates the Flask base schema and imports all three assessment suites. Then run `bash scripts/start_dev.sh` to start Flask and React together. The script does not drop the database. See the root README for details.
+From the repository root, run `bash scripts/setup_ubuntu.sh`. It installs/starts MySQL Server, creates the database and least-privilege account, installs dependencies, applies the Flask-Migrate base schema and imports all three assessment suites. Then run `bash scripts/start_dev.sh` to start Flask and React together. The script does not drop the database. See the root README for existing-database adoption instructions.
 
 ## Manual safe setup order
 
@@ -20,7 +20,7 @@ From the repository root, run `bash scripts/setup_ubuntu.sh`. It installs/starts
 3. Run `00_create_database.sql`.
 4. Edit the password in `01_create_app_user.sql`, then run it as the administrator.
 5. Copy `backend/.env.example` to `backend/.env` and set `DATABASE_URL` to `mysql+pymysql://studentiq_app:YOUR_PASSWORD@127.0.0.1:3306/Student_Performance_Prediction?charset=utf8mb4` (URL-encode reserved characters in the password).
-6. Install `backend/requirements.txt` in a Python virtual environment and start Flask once. SQLAlchemy creates the base application tables, including `student_profiles`.
+6. Install `backend/requirements.txt` in a Python virtual environment and apply the reviewed base schema with `.venv/bin/flask --app backend.app db upgrade`. Flask startup does not create or alter tables.
 7. Run `technical_assessment.sql`, `behavioural_assessment.sql`, and `psychometric_assessment.sql` in Workbench. They require `student_profiles(id)` to exist.
 8. Verify: `SHOW TABLES;`, `SELECT COUNT(*) FROM tech_questions;`, `SELECT COUNT(*) FROM beh_questions;`, `SELECT COUNT(*) FROM psy_questions;`.
 

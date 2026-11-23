@@ -1,4 +1,4 @@
-import type { DashboardData, Profile, AcademicRecord, StudySession, SkillEntry, StudyGoal, AssessmentResult, Assessment, Prediction, ModelInfo, ReportCatalogItem, AdminStudent, AdminOverview, AdminQuestion } from '../types';
+import type { DashboardData, Profile, AcademicRecord, StudySession, SkillEntry, StudyGoal, AssessmentResult, Assessment, Prediction, ModelInfo, ReportCatalogItem, AdminStudent, AdminOverview } from '../types';
 
 const profile: Profile = { id: 1, name: 'Alex Johnson', email: 'alex@example.com', studentId: 'STU2026001', college: 'University of Technology', department: 'Computer Science', degree: 'Bachelor of Technology', specialization: 'Computer Science & Engineering', phone: '', address: '', dateOfBirth: '', admissionYear: 2022, academicYear: '2025–2026', currentSemester: 6, expectedGraduationYear: 2026, skills: ['Python', 'React', 'SQL', 'Data Structures'], careerInterests: ['Machine Learning', 'Data Science'], preferredRoles: ['Machine Learning Engineer'], shortTermGoal: '', longTermGoal: '', preferredTechnologies: [], photoAvailable: false, accountStatus: 'Active', completion: 75, missingInformation: ['Date of birth', 'Phone number', 'Address'] };
 const records: AcademicRecord[] = [
@@ -43,7 +43,6 @@ export const reportCatalog: ReportCatalogItem[] = [
 ];
 const adminStudents: AdminStudent[] = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: ['Alex Johnson', 'Sarah Williams', 'James Miller', 'Emma Davis', 'Michael Chen', 'Olivia Wilson', 'Daniel Brown', 'Priya Patel'][i], email: ['alex', 'sarah', 'james', 'emma', 'michael', 'olivia', 'daniel', 'priya'][i] + '@example.com', studentId: `STU2026${String(i + 1).padStart(3, '0')}`, department: 'Computer Science', academicYear: '2025–2026', currentSemester: 6, cgpa: [8.4, 8.8, 7.9, 9.1, 8.2, 8.6, 7.8, 9.0][i], attendance: [92, 96, 85, 98, 90, 94, 83, 97][i], active: true }));
 const adminOverview: AdminOverview = { students: 8, activeStudents: 8, averageCgpa: 8.5, averageAttendance: 92.6, records: 24, assessments: 2, predictions: 0 };
-const adminQuestions: AdminQuestion[] = [{ id: 1, text: 'What is the output of print(2 + 3 * 4)?', options: ['20', '14', '24', '9'], correctIndex: 1, category: 'Python', difficulty: 'Basic', explanation: 'Multiplication is evaluated before addition.' }, { id: 2, text: 'Which data structure uses FIFO ordering?', options: ['Stack', 'Queue', 'Tree', 'Set'], correctIndex: 1, category: 'Data Structures', difficulty: 'Basic', explanation: 'A queue removes the first inserted element first.' }];
 const storeKey = 'studentiq-preview-v1';
 interface PreviewStore { profile: Profile; sessions: StudySession[]; skills: SkillEntry[]; goals: StudyGoal[]; }
 function readStore(): PreviewStore { try { const saved = sessionStorage.getItem(storeKey); if (saved) return JSON.parse(saved) as PreviewStore; } catch { /* Storage is optional. */ } return { profile, sessions, skills, goals }; }
@@ -60,7 +59,6 @@ export const previewStore = {
   reportCatalog,
   adminStudents,
   adminOverview,
-  adminQuestions,
   adminRecords: records.map((record, i) => ({ ...record, studentId: adminStudents[i].id, studentName: adminStudents[i].name })),
   saveProfile: (data: Partial<Profile>) => { memoryStore = { ...memoryStore, profile: { ...memoryStore.profile, ...data, id: 1, email: profile.email } }; writeStore(memoryStore); return memoryStore.profile; },
   addSession: (data: Omit<StudySession, 'id'>) => { const item = { ...data, id: Math.max(0, ...memoryStore.sessions.map((s) => s.id)) + 1 }; memoryStore = { ...memoryStore, sessions: [...memoryStore.sessions, item] }; writeStore(memoryStore); return item; },

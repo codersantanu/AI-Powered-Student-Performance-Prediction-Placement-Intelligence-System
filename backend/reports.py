@@ -34,7 +34,7 @@ def report_data(user, key, semester):
     records = list(db.session.scalars(semester_filter(select(AcademicRecord).filter_by(student_id=user.id).order_by(AcademicRecord.id), semester)).all())
     attempts = db.session.scalars(select(AssessmentAttempt).filter(AssessmentAttempt.student_id == user.id, AssessmentAttempt.submitted_at.isnot(None))).all()
     predictions = list(db.session.scalars(select(Prediction).filter_by(student_id=user.id).order_by(Prediction.created_at.desc())).all())
-    record_rows = lambda: [{'semester': r.semester, 'academicYear': r.academicYear, 'SGPA': r.sgpa, 'attendance': r.attendance, 'classesAttended': r.classesAttended, 'totalClasses': r.totalClasses, 'activeBacklogs': r.activeBacklogs, 'clearedBacklogs': r.clearedBacklogs, 'subjects': r.subjects} for r in records]
+    record_rows = lambda: [{'semester': r.semester, 'academicYear': r.academic_year, 'SGPA': r.sgpa, 'attendance': r.attendance, 'classesAttended': r.classes_attended, 'totalClasses': r.total_classes, 'activeBacklogs': r.active_backlogs, 'clearedBacklogs': r.cleared_backlogs, 'subjects': r.subjects} for r in records]
     if key == 'academic':
         return {'student': user.name, 'records': record_rows()}
     if key == 'semester':

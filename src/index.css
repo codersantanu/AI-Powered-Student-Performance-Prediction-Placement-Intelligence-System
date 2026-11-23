@@ -382,7 +382,7 @@ button, a { touch-action: manipulation; }
   .hero-description { font-size: 14px; max-width: 540px; }
   .hero-trust { font-size: 8px; gap: 9px; }
   .dashboard-sidebar { width: auto; min-width: 0; flex: 0 0 48px; align-self: stretch; overflow: hidden; padding: 8px; border-right: 0; border-bottom: 1px solid #e8ecf2; }
-  .dashboard-sidebar > .brand, .workspace-label, .sidebar-bottom { display: none; }
+  .dashboard-sidebar > .brand, .dashboard-sidebar > .workspace-label, .dashboard-sidebar > .sidebar-bottom { display: none; }
   .dashboard-nav { width: 100%; min-width: 0; flex-direction: row; gap: 4px; overflow-x: auto; scrollbar-width: none; }
   .dashboard-nav::-webkit-scrollbar { display: none; }
   .dashboard-nav-item { width: auto; flex-shrink: 0; min-height: 32px; padding: 7px 10px; font-size: 10px; gap: 7px; white-space: nowrap; }

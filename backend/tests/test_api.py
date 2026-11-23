@@ -1,12 +1,24 @@
 import pytest
+from sqlalchemy import inspect
 from backend import create_app
 from backend.extensions import db
+
+
+def test_app_factory_does_not_create_database_schema():
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite://',
+        'JWT_SECRET_KEY': 'test-only-secret-key-with-more-than-32-characters',
+    })
+    with app.app_context():
+        assert inspect(db.engine).get_table_names() == []
 
 
 @pytest.fixture()
 def app():
     app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite://', 'JWT_SECRET_KEY': 'test-only-secret-key-with-more-than-32-characters'})
     with app.app_context():
+        db.create_all()
         yield app
         db.session.remove()
         db.drop_all()
@@ -147,3 +159,42 @@ def test_reports_use_real_records(client):
     assert pdf.status_code == 200
     assert pdf.mimetype == 'application/pdf'
     assert len(client.get('/api/student/reports/history', headers=headers).get_json()) == 1
+
+
+def test_academic_records_use_frontend_field_names_and_populated_reports(client, app):
+    student_id = register(client).get_json()['user']['id']
+    student_headers = auth_header(login(client))
+    make_admin(app)
+    admin_headers = auth_header(login(client, 'admin@example.com', 'AdminPassword123!'))
+
+    created = client.post(
+        '/api/admin/academic-records',
+        headers=admin_headers,
+        json={
+            'studentId': student_id,
+            'semester': 2,
+            'academicYear': '2025-2026',
+            'sgpa': 8.25,
+            'attendance': 90,
+            'classesAttended': 45,
+            'totalClasses': 50,
+            'activeBacklogs': 0,
+            'clearedBacklogs': 1,
+            'class10': 88,
+            'class12': 91,
+            'subjects': [],
+        },
+    )
+    assert created.status_code == 201
+    assert created.get_json()['academicYear'] == '2025-2026'
+    assert 'academic_year' not in created.get_json()
+
+    student_records = client.get('/api/student/academic-records', headers=student_headers)
+    assert student_records.status_code == 200
+    assert student_records.get_json()[0]['classesAttended'] == 45
+    assert student_records.get_json()[0]['activeBacklogs'] == 0
+
+    report = client.get('/api/student/reports/academic', headers=student_headers)
+    assert report.status_code == 200
+    assert report.get_json()['data']['records'][0]['academicYear'] == '2025-2026'
+    assert client.get('/api/student/reports/academic/download', headers=student_headers).mimetype == 'application/pdf'

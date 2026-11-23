@@ -1,35 +1,26 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { Brain, Code2, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useResource } from '../../hooks/useWorkspace';
+import { Database } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { adminService } from '../../services/adminService';
+import { useResource } from '../../hooks/useWorkspace';
 import { assessmentService } from '../../services/assessmentService';
 import { errorMessage } from '../../services/api';
-import { previewStore } from '../../data/preview';
-import type { AdminQuestion, Assessment, ImportedAssessment } from '../../types';
-import { Badge, Card, DataTable, ErrorState, FormError, LoadingState, Modal, PageHeading, SaveButton } from '../../components/dashboard/Page';
-function QuestionForm({ question, onClose, onSaved }: { question?: AdminQuestion; onClose: () => void; onSaved: () => void }) { const { isPreview } = useAuth(); const [text, setText] = useState(question?.text || ''); const [options, setOptions] = useState(question?.options || ['', '', '', '']); const [correct, setCorrect] = useState(String(question?.correctIndex ?? 0)); const [category, setCategory] = useState(question?.category || 'Python'); const [difficulty, setDifficulty] = useState(question?.difficulty || 'Basic'); const [explanation, setExplanation] = useState(question?.explanation || ''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  const submit = async (e: FormEvent) => { e.preventDefault(); setBusy(true); setError(''); try { if (isPreview) throw new Error('The official question bank is read-only in preview mode. Connect the backend to add or edit questions.'); const data = { text, options, correctIndex: Number(correct), category, difficulty, explanation }; if (question) await adminService.updateQuestion(question.id, data); else await adminService.addQuestion(data); onSaved(); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); } }; return <Modal title={question ? 'Edit assessment question' : 'Add assessment question'} onClose={onClose}><form className="modal-form" onSubmit={submit}><label className="form-field">Question text<textarea required rows={3} maxLength={2000} value={text} onChange={(e) => setText(e.target.value)} /></label><div className="form-grid">{options.map((option, i) => <label className="form-field" key={i}>Option {String.fromCharCode(65 + i)}<input required maxLength={500} value={option} onChange={(e) => setOptions((previous) => previous.map((o, j) => j === i ? e.target.value : o))} /></label>)}</div><div className="form-grid"><label className="form-field">Correct option<select value={correct} onChange={(e) => setCorrect(e.target.value)}>{options.map((_, i) => <option key={i} value={i}>{String.fromCharCode(65 + i)}</option>)}</select></label><label className="form-field">Category<input required maxLength={100} list="question-categories" value={category} onChange={(e) => setCategory(e.target.value)} /><datalist id="question-categories">{['Python', 'Java', 'C', 'C++', 'Data Structures', 'DBMS', 'Operating Systems', 'Computer Networks', 'Artificial Intelligence', 'Machine Learning', 'Web Development', 'Psychometric'].map((c) => <option key={c} value={c} />)}</datalist></label></div><label className="form-field">Difficulty<select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>{['Basic', 'Intermediate', 'Advanced'].map((d) => <option key={d}>{d}</option>)}</select></label><label className="form-field">Answer explanation<textarea rows={2} maxLength={2000} value={explanation} onChange={(e) => setExplanation(e.target.value)} /></label><FormError message={error} /><div className="modal-actions"><button type="button" className="button button--secondary" onClick={onClose}>Cancel</button><SaveButton loading={busy}>Save Question</SaveButton></div></form></Modal>; }
-function AssessmentForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) { const { isPreview } = useAuth(); const [title, setTitle] = useState(''); const [category, setCategory] = useState('Python'); const [difficulty, setDifficulty] = useState('Basic'); const [duration, setDuration] = useState('10'); const [dueAt, setDueAt] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const submit = async (e: FormEvent) => { e.preventDefault(); setBusy(true); setError(''); try { if (isPreview) throw new Error('Publishing assessments requires the authenticated backend.'); await adminService.addAssessment({ title, category, difficulty, durationMinutes: Number(duration), dueAt: dueAt ? new Date(dueAt).toISOString() : null }); onSaved(); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); } }; return <Modal title="Publish an assessment" onClose={onClose}><form className="modal-form" onSubmit={submit}><p className="form-description">Students receive randomly selected questions from the official bank matching this subject and difficulty.</p><label className="form-field">Assessment title<input required maxLength={160} value={title} onChange={(e) => setTitle(e.target.value)} /></label><div className="form-grid"><label className="form-field">Subject<select value={category} onChange={(e) => setCategory(e.target.value)}>{['Python', 'Java', 'C', 'C++', 'Data Structures', 'DBMS', 'Operating Systems', 'Computer Networks', 'Artificial Intelligence', 'Machine Learning', 'Web Development', 'Psychometric'].map((c) => <option key={c}>{c}</option>)}</select></label><label className="form-field">Difficulty<select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>{['Basic', 'Intermediate', 'Advanced'].map((d) => <option key={d}>{d}</option>)}</select></label></div><div className="form-grid"><label className="form-field">Duration (minutes)<input type="number" required min={1} max={180} value={duration} onChange={(e) => setDuration(e.target.value)} /></label><label className="form-field">Due date (optional)<input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></label></div><FormError message={error} /><div className="modal-actions"><button type="button" className="button button--secondary" onClick={onClose}>Cancel</button><SaveButton loading={busy}>Publish Assessment</SaveButton></div></form></Modal>; }
-export default function AssessmentManagement() {
-  const { isPreview } = useAuth(); const assessments = useResource<Assessment[]>('/admin/assessments', isPreview ? previewStore.assessments : null); const questions = useResource<AdminQuestion[]>('/admin/questions', isPreview ? previewStore.adminQuestions : null); const [tab, setTab] = useState('assessments'); const [query, setQuery] = useState(''); const [question, setQuestion] = useState<AdminQuestion | 'new' | null>(null); const [assessmentOpen, setAssessmentOpen] = useState(false); const [deleting, setDeleting] = useState<AdminQuestion | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const filtered = (questions.data || []).filter((q) => `${q.text} ${q.category}`.toLowerCase().includes(query.toLowerCase()));
-  const remove = async () => { if (!deleting) return; setBusy(true); try { if (isPreview) throw new Error('The official question bank is read-only in preview mode.'); await adminService.deleteQuestion(deleting.id); setDeleting(null); questions.reload(); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); } };
-  return <><PageHeading title="Assessments & Questions" description="Publish meaningful assessments and manage your official question bank." actions={<button type="button" className="button button--primary" onClick={() => tab === 'assessments' ? setAssessmentOpen(true) : setQuestion('new')}><Plus size={16} />{tab === 'assessments' ? 'Publish Assessment' : 'Add Question'}</button>} />{assessments.loading || questions.loading ? <LoadingState /> : assessments.error || questions.error ? <ErrorState message={assessments.error || questions.error} /> : <><div className="pill-tabs admin-tabs"><button type="button" className={tab === 'assessments' ? 'active' : ''} onClick={() => setTab('assessments')}><Brain size={15} />Assessments</button><button type="button" className={tab === 'questions' ? 'active' : ''} onClick={() => setTab('questions')}><Code2 size={15} />Question Bank</button></div><Card>{tab === 'assessments' ? <DataTable columns={['Assessment', 'Subject', 'Difficulty', 'Questions', 'Duration', 'Due date']} empty={!assessments.data?.length}>{assessments.data?.map((a) => <tr key={a.id}><td><strong>{a.title}</strong></td><td>{a.category}</td><td><Badge tone="blue">{a.difficulty}</Badge></td><td>{a.questionCount}</td><td>{a.duration} minutes</td><td>{a.dueAt ? new Date(a.dueAt).toLocaleDateString() : 'Practice'}</td></tr>)}</DataTable> : <><div className="table-toolbar"><div className="table-search"><SearchIcon /><input aria-label="Search question bank" placeholder="Search questions or subjects…" value={query} onChange={(e) => setQuery(e.target.value)} /></div><Badge>{filtered.length} questions</Badge></div><DataTable columns={['Question', 'Subject', 'Difficulty', 'Actions']} empty={!filtered.length}>{filtered.map((q) => <tr key={q.id}><td><strong>{q.text}</strong></td><td>{q.category}</td><td><Badge tone="neutral">{q.difficulty}</Badge></td><td><div className="table-actions"><button type="button" className="icon-button" aria-label={`Edit question ${q.id}`} onClick={() => setQuestion(q)}><Pencil size={15} /></button><button type="button" className="icon-button danger-icon" aria-label={`Delete question ${q.id}`} onClick={() => setDeleting(q)}><Trash2 size={15} /></button></div></td></tr>)}</DataTable></>}</Card></>}<ImportedAssessmentControls /><FormError message={error} />{question && <QuestionForm question={question === 'new' ? undefined : question} onClose={() => setQuestion(null)} onSaved={() => { setQuestion(null); questions.reload(); }} />}{assessmentOpen && <AssessmentForm onClose={() => setAssessmentOpen(false)} onSaved={() => { setAssessmentOpen(false); assessments.reload(); }} />}{deleting && <Modal title="Delete this question?" onClose={() => setDeleting(null)}><div className="modal-form"><p className="form-description">This question will be removed from the official bank. Existing completed assessment results are preserved.</p><div className="modal-actions"><button type="button" className="button button--secondary" onClick={() => setDeleting(null)}>Keep Question</button><button type="button" className="button button--danger" disabled={busy} onClick={() => void remove()}>{busy ? 'Deleting…' : 'Delete Question'}</button></div></div></Modal>}</>;
-}
-function SearchIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>; }
+import type { ImportedAssessment } from '../../types';
+import { Badge, Card, DataTable, ErrorState, FormError, LoadingState, PageHeading } from '../../components/dashboard/Page';
 
-function ImportedAssessmentControls() {
+export default function AssessmentManagement() {
   const { isPreview } = useAuth();
   const imported = useResource<ImportedAssessment[]>('/admin/special-assessments', isPreview ? [] : null);
   const [busyKey, setBusyKey] = useState('');
   const [error, setError] = useState('');
+
   const toggle = async (item: ImportedAssessment) => {
-    const key = item.kind + ':' + item.id;
+    const key = `${item.kind}:${item.id}`;
     setBusyKey(key);
     setError('');
     try {
-      if (isPreview) throw new Error('Publishing the imported MySQL assessments requires the live Flask API.');
+      if (isPreview) {
+        throw new Error('Publishing imported assessments requires the live Flask API.');
+      }
       await assessmentService.setImportedPublished(item.kind, item.id, !item.published);
       imported.reload();
     } catch (err) {
@@ -38,16 +29,46 @@ function ImportedAssessmentControls() {
       setBusyKey('');
     }
   };
-  return <Card>
-    <div className="card-heading"><div><h2>Imported assessment suites</h2><p>Publish or hide the technical, behavioural and psychometric question sets imported from MySQL.</p></div><Badge tone="purple">MySQL question banks</Badge></div>
-    {imported.loading ? <LoadingState /> : imported.error ? <ErrorState message={imported.error} /> : imported.data?.length ? <DataTable columns={['Assessment', 'Type', 'Visibility', 'Student access']} empty={false}>
-      {imported.data.map((item) => <tr key={item.kind + ':' + item.id}>
-        <td><strong>{item.title}</strong></td>
-        <td>{item.kind}</td>
-        <td><Badge tone={item.published ? 'green' : 'neutral'}>{item.published ? 'Published' : 'Draft'}</Badge></td>
-        <td><button type="button" className={'button button--small ' + (item.published ? 'button--secondary' : 'button--primary')} disabled={busyKey !== ''} onClick={() => void toggle(item)}>{busyKey === item.kind + ':' + item.id ? 'Saving…' : item.published ? 'Unpublish' : 'Publish'}</button></td>
-      </tr>)}
-    </DataTable> : <p className="muted-note">No imported assessments found. Run the three SQL imports in MySQL Workbench after the Flask base tables exist.</p>}
-    <FormError message={error} />
-  </Card>;
+
+  return (
+    <>
+      <PageHeading
+        title="Imported Assessment Suites"
+        description="Publish or hide the MySQL-backed assessments students can take."
+      />
+      <Card>
+        <div className="card-heading">
+          <div>
+            <h2>Assessment visibility</h2>
+            <p>Question content, answer keys, and dimension mappings remain in the imported MySQL banks.</p>
+          </div>
+          <Badge tone="purple"><Database size={13} />MySQL question banks</Badge>
+        </div>
+        {imported.loading ? <LoadingState /> : imported.error ? <ErrorState message={imported.error} /> : imported.data?.length ? (
+          <DataTable columns={['Assessment', 'Type', 'Visibility', 'Student access']} empty={false}>
+            {imported.data.map((item) => (
+              <tr key={`${item.kind}:${item.id}`}>
+                <td><strong>{item.title}</strong></td>
+                <td>{item.kind}</td>
+                <td><Badge tone={item.published ? 'green' : 'neutral'}>{item.published ? 'Published' : 'Draft'}</Badge></td>
+                <td>
+                  <button
+                    type="button"
+                    className={`button button--small ${item.published ? 'button--secondary' : 'button--primary'}`}
+                    disabled={busyKey !== ''}
+                    onClick={() => void toggle(item)}
+                  >
+                    {busyKey === `${item.kind}:${item.id}` ? 'Saving…' : item.published ? 'Unpublish' : 'Publish'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        ) : (
+          <p className="muted-note">No imported assessments found. Connect the Flask API and import the three assessment SQL files.</p>
+        )}
+        <FormError message={error} />
+      </Card>
+    </>
+  );
 }

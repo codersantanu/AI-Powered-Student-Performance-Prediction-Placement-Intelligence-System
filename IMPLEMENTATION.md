@@ -109,7 +109,7 @@ Without `VITE_API_URL`, protected routes redirect to Login. Explicit sample prev
 3. Install/start Ubuntu MySQL Server: `sudo apt install mysql-server && sudo systemctl enable --now mysql`.
 4. In MySQL Workbench, connect to `127.0.0.1:3306`; run `database/mysql/00_create_database.sql`, then edit and run `database/mysql/01_create_app_user.sql`.
 5. Copy `backend/.env.example` to `backend/.env`; set the MySQL `DATABASE_URL`, `JWT_SECRET_KEY`, and `CORS_ORIGINS`.
-6. Start `python -m backend.app` once so SQLAlchemy creates `users`, `student_profiles`, and the other base models. The app currently calls `db.create_all()`; use reviewed Alembic migrations for future production schema changes.
+6. Apply the base schema with `.venv/bin/flask --app backend.app db upgrade`. Flask startup does not create or alter production tables. For a database initialized before migration tracking, follow the backup and verified-adoption steps in `README.md`.
 7. Run `database/mysql/technical_assessment.sql`, `behavioural_assessment.sql`, and `psychometric_assessment.sql` in Workbench after `student_profiles` exists.
 8. Start the frontend with `VITE_API_URL=http://localhost:5000/api npm run dev`.
 9. Provision the first admin through the trusted CLI command `flask --app backend.app create-admin`, not a public registration role selector.

@@ -69,23 +69,52 @@ python3 -m venv .venv
 .venv/bin/pip install -r backend/requirements.txt
 npm install
 
-echo "Creating the base StudentIQ tables..."
+echo "Checking whether this database needs safe migration adoption..."
+.venv/bin/python - <<'PY'
+from pathlib import Path
+import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, inspect
+
+load_dotenv(Path("backend/.env"))
+engine = create_engine(os.environ["DATABASE_URL"])
+with engine.connect() as connection:
+    tables = set(inspect(connection).get_table_names())
+application_tables = {
+    "users", "student_profiles", "academic_records", "study_sessions",
+    "skill_entries", "study_goals", "assessments", "questions",
+    "assessment_attempts", "predictions", "reports", "revoked_tokens",
+}
+has_studentiq_tables = bool(tables & application_tables) or any(
+    name.startswith(("tech_", "beh_", "psy_")) for name in tables
+)
+if "alembic_version" not in tables and has_studentiq_tables:
+    raise SystemExit(
+        "An existing StudentIQ schema has no migration history. Back it up, "
+        "verify its base tables match the initial migration, then follow the "
+        "existing-database adoption instructions in README.md; refusing to alter it."
+    )
+engine.dispose()
+PY
+
+echo "Applying reviewed StudentIQ database migrations..."
+.venv/bin/flask --app backend.app db upgrade
+
 .venv/bin/python - <<'PY'
 from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv(Path("backend/.env"))
-from backend import create_app
-from backend.extensions import db
-from sqlalchemy import inspect
+from sqlalchemy import create_engine, inspect
+import os
 
-app = create_app()
-with app.app_context():
-    required = {"users", "student_profiles", "academic_records"}
-    found = set(inspect(db.engine).get_table_names())
-    missing = required - found
-    if missing:
-        raise SystemExit(f"Base schema is incomplete: {sorted(missing)}")
-    print("Base schema ready:", ", ".join(sorted(required)))
+load_dotenv(Path("backend/.env"))
+engine = create_engine(os.environ["DATABASE_URL"])
+required = {"users", "student_profiles", "academic_records"}
+with engine.connect() as connection:
+    missing = required - set(inspect(connection).get_table_names())
+if missing:
+    raise SystemExit(f"Base schema is incomplete after migration: {sorted(missing)}")
+print("Base schema ready:", ", ".join(sorted(required)))
+engine.dispose()
 PY
 
 MYSQL_CNF="$(mktemp)"
