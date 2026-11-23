@@ -63,8 +63,13 @@ def submit(user):
     ordered = [by_id[qid] for qid in attempt.question_ids if qid in by_id]
     if len(ordered) != len(attempt.question_ids):
         raise ApiError('Some questions are no longer available. Contact your administrator.', 409)
-    for answer in answers:
-        if answer is not None and (isinstance(answer, bool) or not isinstance(answer, int) or answer < 0 or answer >= len(by_id[attempt.question_ids[answers.index(answer)]].options)):
+    for question, answer in zip(ordered, answers):
+        if answer is not None and (
+            isinstance(answer, bool)
+            or not isinstance(answer, int)
+            or answer < 0
+            or answer >= len(question.options)
+        ):
             raise ApiError('Each answer must be a valid option index or null.')
     attempt.answers = answers
     attempt.result = score_attempt(attempt, ordered)
