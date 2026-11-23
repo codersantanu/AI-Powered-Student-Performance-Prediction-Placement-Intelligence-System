@@ -157,7 +157,7 @@ def _questions(kind, assessment_id):
     )
     for q in questions:
         q["options"] = _rows(
-            "SELECT id, option_code AS label, option_text AS text, display_order "
+            "SELECT id, option_code AS label, option_text AS text, interpretation, display_order "
             "FROM psy_answer_options WHERE question_id=:question_id AND is_active=1 "
             "ORDER BY display_order, id",
             {"question_id": q["id"]},
@@ -630,6 +630,14 @@ def _saved_result(kind, attempt):
             for item in _rows("SELECT question_id, correct_option_id FROM tech_question_answers")
         }
         review = []
+        category_totals = {}
+        awarded_rows = {
+            int(item["question_id"]): float(item["awarded_marks"] or 0)
+            for item in _rows(
+                "SELECT question_id, awarded_marks FROM tech_student_responses WHERE attempt_id=:id",
+                {"id": attempt_id},
+            )
+        }
         for q in questions:
             picked_id = selected.get(int(q["id"]))
             chosen = next((o for o in q["options"] if o["id"] == picked_id), None)
@@ -641,6 +649,16 @@ def _saved_result(kind, attempt):
                 "explanation": exp["explanation"] if exp else "",
                 "correct": bool(chosen and right and chosen["id"] == right["id"]),
             })
+            bucket = category_totals.setdefault(q["dimension"], {"awarded": 0.0, "maximum": 0.0})
+            bucket["awarded"] += awarded_rows.get(int(q["id"]), 0.0)
+            bucket["maximum"] += float(q["marks"] or 0)
+        categories = [
+            {
+                "name": name,
+                "score": round(max(0.0, min(100.0, value["awarded"] / value["maximum"] * 100)), 1),
+            }
+            for name, value in category_totals.items() if value["maximum"] > 0
+        ]
         return {
             "id": attempt_id, "assessmentId": int(attempt["assessment_id"]),
             "title": assessment["title"], "category": "Technical", "scoringType": "technical",
@@ -649,7 +667,7 @@ def _saved_result(kind, attempt):
             "wrong": int(row["wrong_answers"]), "unanswered": int(row["unanswered_questions"]),
             "maximumMarks": float(row["maximum_marks"]), "scoreObtained": float(row["score_obtained"]),
             "performanceBand": row["performance_band"], "date": str(attempt["submitted_at"]),
-            "categories": [], "review": review,
+            "categories": categories, "review": review,
             "note": "Scored with the assessment answer key and scoring configuration.",
         }
     result_table = _result_table(kind)
