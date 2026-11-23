@@ -9,8 +9,10 @@
 -- =====================================================================
 -- FINAL PSYCHOMETRIC ASSESSMENT MODULE
 -- Database: Student_Performance_Prediction
--- Source dataset preserved: 15 scenarios, 60 options, 5 dimensions
--- Includes 241 option-to-dimension score mappings and scoring config.
+-- Source dataset preserved: 15 scenarios, 60 options, 5 dimensions.
+-- The source file contains no option-to-dimension score mappings or scoring
+-- configuration rows. The assessment stays unpublished until mappings are
+-- supplied; do not treat empty dimension results as a completed assessment.
 --
 -- IMPORTANT:
 -- 1. This safe import does not drop any tables.

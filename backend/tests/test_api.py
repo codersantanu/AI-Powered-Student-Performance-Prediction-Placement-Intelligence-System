@@ -114,7 +114,7 @@ def test_study_session_crud_and_ownership(client, app):
 def test_technical_assessment_server_scoring(client, app):
     register(client)
     headers = auth_header(login(client))
-    from backend.models import Assessment, Question
+    from backend.models import Assessment, AssessmentAttempt, Question
     question = Question(text='2 + 3 * 4 = ?', options=['20', '14', '24', '9'], correct_index=1, category='Python', difficulty='Basic', explanation='Multiply before adding.')
     db.session.add(question)
     db.session.commit()
@@ -134,6 +134,29 @@ def test_technical_assessment_server_scoring(client, app):
     assert result.status_code == 200
     assert result.get_json()['score'] == 100
     assert result.get_json()['correct'] == 1
+    assert 'correctAnswer' not in result.get_json()['review'][0]
+    assert 'explanation' not in result.get_json()['review'][0]
+    assert result.get_json()['review'][0]['correct'] is None
+
+    attempt = db.session.get(AssessmentAttempt, body['id'])
+    legacy_result = dict(attempt.result)
+    legacy_result['review'] = [{
+        'question': 'Legacy question',
+        'selected': 'Selected option',
+        'correctAnswer': 'Private answer',
+        'correctIndex': 1,
+        'explanation': 'Private explanation',
+        'correct': True,
+    }]
+    attempt.result = legacy_result
+    db.session.commit()
+    history = client.get('/api/assessments/results', headers=headers).get_json()[0]
+    assert 'correctAnswer' not in history['review'][0]
+    assert 'correctIndex' not in history['review'][0]
+    assert 'explanation' not in history['review'][0]
+    assert history['review'][0]['correct'] is None
+    report = client.get('/api/student/reports/technical', headers=headers).get_json()
+    assert 'correctAnswer' not in report['data']['results'][0]['review'][0]
 
 
 def test_prediction_unavailable_without_model(client, monkeypatch):
@@ -197,4 +220,11 @@ def test_academic_records_use_frontend_field_names_and_populated_reports(client,
     report = client.get('/api/student/reports/academic', headers=student_headers)
     assert report.status_code == 200
     assert report.get_json()['data']['records'][0]['academicYear'] == '2025-2026'
+    semester_report = client.get('/api/student/reports/semester', headers=student_headers)
+    assert semester_report.status_code == 200
+    assert semester_report.get_json()['data']['semesters'][0]['academicYear'] == '2025-2026'
+    attendance_report = client.get('/api/student/reports/attendance', headers=student_headers)
+    assert attendance_report.status_code == 200
+    assert attendance_report.get_json()['data']['records'][0]['classesAttended'] == 45
+    assert client.get('/api/admin/reports/download', headers=admin_headers).status_code == 200
     assert client.get('/api/student/reports/academic/download', headers=student_headers).mimetype == 'application/pdf'

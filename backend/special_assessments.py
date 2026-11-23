@@ -309,17 +309,10 @@ def _score_technical(attempt, questions, answers, assessment):
             "is_correct": int(is_correct) if selected else None,
             "awarded_marks": round(awarded, 2),
         })
-        right = next((option for option in options if int(option["id"]) == answer_key.get(qid)), None)
-        answer_details = _row(
-            "SELECT explanation FROM tech_question_answers WHERE question_id=:question_id",
-            {"question_id": qid},
-        )
         review.append({
             "question": question["question"],
             "selected": selected["text"] if selected else "Not answered",
-            "correctAnswer": right["text"] if right else "Answer key unavailable",
-            "explanation": answer_details["explanation"] if answer_details else "",
-            "correct": bool(is_correct),
+            "correct": None,
         })
     if not config["allow_negative_total"]:
         total_score = max(0.0, total_score)
@@ -625,10 +618,6 @@ def _saved_result(kind, attempt):
             {"id": attempt_id},
         )
         selected = {int(item["question_id"]): item["selected_option_id"] for item in responses}
-        answer_key = {
-            int(item["question_id"]): int(item["correct_option_id"])
-            for item in _rows("SELECT question_id, correct_option_id FROM tech_question_answers")
-        }
         review = []
         category_totals = {}
         awarded_rows = {
@@ -641,13 +630,9 @@ def _saved_result(kind, attempt):
         for q in questions:
             picked_id = selected.get(int(q["id"]))
             chosen = next((o for o in q["options"] if o["id"] == picked_id), None)
-            right = next((o for o in q["options"] if int(o["id"]) == answer_key.get(int(q["id"]))), None)
-            exp = _row("SELECT explanation FROM tech_question_answers WHERE question_id=:id", {"id": q["id"]})
             review.append({
                 "question": q["question"], "selected": chosen["text"] if chosen else "Not answered",
-                "correctAnswer": right["text"] if right else "Answer key unavailable",
-                "explanation": exp["explanation"] if exp else "",
-                "correct": bool(chosen and right and chosen["id"] == right["id"]),
+                "correct": None,
             })
             bucket = category_totals.setdefault(q["dimension"], {"awarded": 0.0, "maximum": 0.0})
             bucket["awarded"] += awarded_rows.get(int(q["id"]), 0.0)
@@ -701,6 +686,30 @@ def assessment_results(user, kind):
     return jsonify(results)
 
 
+@special_assessment_bp.get(
+    "/admin/special-assessments/<kind>/<int:student_profile_id>/results"
+)
+@admin_required
+def admin_assessment_results(user, kind, student_profile_id):
+    kind = _kind(kind)
+    if not _row(
+        "SELECT id FROM student_profiles WHERE id=:id",
+        {"id": student_profile_id},
+    ):
+        raise ApiError("Student profile not found.", 404)
+    table = {
+        "technical": "tech_assessment_attempts",
+        "behavioural": "beh_assessment_attempts",
+        "psychometric": "psy_assessment_attempts",
+    }[kind]
+    attempts = _rows(
+        f"SELECT * FROM {table} WHERE student_profile_id=:profile_id "
+        "AND submitted_at IS NOT NULL ORDER BY submitted_at DESC, id DESC",
+        {"profile_id": student_profile_id},
+    )
+    return jsonify([_saved_result(kind, attempt) for attempt in attempts])
+
+
 @special_assessment_bp.get("/admin/special-assessments")
 @admin_required
 def admin_list_assessments(user):
@@ -742,6 +751,32 @@ def publish_assessment(user, kind, assessment_id):
         )
         if not questions or not questions["count"]:
             raise ApiError("Add at least one active question before publishing.")
+        if kind == "psychometric":
+            dimensions = _row(
+                "SELECT COUNT(*) AS count FROM psy_dimensions WHERE assessment_id=:id",
+                {"id": assessment_id},
+            )
+            mapped_dimensions = _row(
+                "SELECT COUNT(DISTINCT scores.dimension_id) AS count "
+                "FROM psy_option_dimension_scores scores "
+                "JOIN psy_answer_options options ON options.id=scores.option_id "
+                "JOIN psy_questions questions ON questions.id=options.question_id "
+                "JOIN psy_dimensions dimensions ON dimensions.id=scores.dimension_id "
+                "AND dimensions.assessment_id=questions.assessment_id "
+                "WHERE questions.assessment_id=:id AND questions.is_active=1 "
+                "AND options.is_active=1",
+                {"id": assessment_id},
+            )
+            if (
+                not dimensions
+                or not dimensions["count"]
+                or not mapped_dimensions
+                or mapped_dimensions["count"] != dimensions["count"]
+            ):
+                raise ApiError(
+                    "Map active answer options to every psychometric dimension before publishing.",
+                    409,
+                )
     db.session.execute(
         text(f"UPDATE {table} SET is_published=:published WHERE id=:id"),
         {"published": int(published), "id": assessment_id},

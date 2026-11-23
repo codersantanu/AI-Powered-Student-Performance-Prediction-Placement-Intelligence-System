@@ -32,6 +32,18 @@ From the repository root, run `bash scripts/setup_ubuntu.sh`. It installs/starts
 - Behavioural and psychometric scripts retain their `beh_` and `psy_` table prefixes.
 - The uploaded source SQL referenced `student_profiles.profile_id`; the current project model uses `student_profiles.id`. Foreign keys in these project copies target `id`.
 - Back up the database and review SQL before making schema changes. The repository includes student-facing APIs for all three imported suites, with technical answer-key scoring and behavioural/psychometric dimension summaries. The administrator must publish each suite before students can start it.
+- The psychometric SQL currently seeds questions and dimensions but does not provide option-to-dimension score mappings. The API refuses publication until every dimension has mappings; do not invent mappings to make the assessment appear complete.
+
+## MySQL integration tests
+
+The standard backend tests use isolated SQLite databases. The live-MySQL workflow test is opt-in and writes uniquely named test accounts, profile/academic records, reports, assessments, and attempts, so point it only at a dedicated schema whose name ends in `_test`. Prepare that schema with the reviewed Flask migration and all three safe assessment imports, then run:
+
+```bash
+STUDENTIQ_MYSQL_TEST_URL='mysql+pymysql://USER:PASSWORD@127.0.0.1:3306/studentiq_integration_test?charset=utf8mb4' \
+  .venv/bin/python -m pytest backend/tests/test_mysql_integration.py -q
+```
+
+The integration test does not create, drop, or clean up tables or records. It leaves generated test records in the dedicated test schema and verifies persistence through a second Flask app instance.
 
 ## Ubuntu checks
 

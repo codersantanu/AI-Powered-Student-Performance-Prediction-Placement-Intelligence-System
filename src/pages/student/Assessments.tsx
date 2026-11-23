@@ -116,7 +116,7 @@ export default function Assessments({ kind = 'technical' }: { kind?: AssessmentK
     <div className="assessment-results">
       <div className="assessment-result-hero">
         <span className="assessment-result-icon">{reflective ? <Brain size={29} /> : <CheckCircle2 size={29} />}</span>
-        <div><span className="eyebrow">{isPreview ? 'SAMPLE ASSESSMENT RESULT' : 'ASSESSMENT COMPLETE'}</span><h2>{item.title}</h2><p>{reflective ? 'Your selected responses are summarized below. This is for reflection, not diagnosis.' : 'Review your answers, score and topic-wise performance.'}</p></div>
+        <div><span className="eyebrow">{isPreview ? 'SAMPLE ASSESSMENT RESULT' : 'ASSESSMENT COMPLETE'}</span><h2>{item.title}</h2><p>{reflective ? 'Your selected responses are summarized below. This is for reflection, not diagnosis.' : isPreview ? 'Review this sample assessment, including its answer feedback.' : 'Review your responses, score and topic-wise performance. Correct answers are not disclosed.'}</p></div>
       </div>
       <div className="statistics-grid statistics-grid--three">
         <div className="result-stat"><span>{reflective ? 'Responses in this assessment' : 'Score'}</span><strong>{reflective ? item.total : item.score == null ? '—' : item.score + '%'}</strong></div>
@@ -131,10 +131,10 @@ export default function Assessments({ kind = 'technical' }: { kind?: AssessmentK
         <p className="muted-note">{item.note || (reflective ? 'Dimension scores summarize the response mappings in the assessment database.' : 'Technical score is calculated with the imported answer key and scoring configuration.')}</p>
       </Card>
       {item.review.length > 0 && <Card>
-        <SectionTitle title="Review Your Responses" description={reflective ? 'Review the interpretation attached to your selected options.' : 'Review correct answers and explanations.'} />
+        <SectionTitle title="Review Your Responses" description={reflective ? 'Review the interpretation attached to your selected options.' : isPreview ? 'Review correct answers and explanations.' : 'Review your selected responses. Correct answers are not disclosed.'} />
         <div className="assessment-review">{item.review.map((review, i) => <details key={i}>
-          <summary><span className={'review-status' + (review.correct === true ? ' review-status--correct' : '')}>{reflective ? <Brain size={14} /> : review.correct ? <Check size={14} /> : <X size={14} />}</span><span>{review.question}</span><ChevronRight size={14} className="review-chevron" /></summary>
-          <div><p><strong>Your response:</strong> {review.selected}</p>{!reflective && review.correctAnswer && <p><strong>Correct response:</strong> {review.correctAnswer}</p>}{(reflective ? review.interpretation : review.explanation) && <p>{reflective ? review.interpretation : review.explanation}</p>}</div>
+          <summary><span className={'review-status' + (review.correct === true ? ' review-status--correct' : '')}>{reflective || (!isPreview && review.correct == null) ? <Brain size={14} /> : review.correct ? <Check size={14} /> : <X size={14} />}</span><span>{review.question}</span><ChevronRight size={14} className="review-chevron" /></summary>
+          <div><p><strong>Your response:</strong> {review.selected}</p>{isPreview && !reflective && review.correctAnswer && <p><strong>Correct response:</strong> {review.correctAnswer}</p>}{(reflective ? review.interpretation : isPreview ? review.explanation : undefined) && <p>{reflective ? review.interpretation : review.explanation}</p>}</div>
         </details>)}</div>
       </Card>}
       <div className="assessment-bottom-actions">
