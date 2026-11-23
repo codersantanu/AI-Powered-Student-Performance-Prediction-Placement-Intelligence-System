@@ -35,4 +35,4 @@ curl --silent --fail http://127.0.0.1:5000/api/health >/dev/null || {
 echo "Flask API: http://127.0.0.1:5000/api"
 echo "React app: http://127.0.0.1:5173"
 echo "Press Ctrl+C to stop both development services."
-npm run dev -- --host 127.0.0.1
+npm run dev -- --host 127.0.0.1 --strictPort
