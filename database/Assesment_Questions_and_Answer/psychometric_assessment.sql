@@ -1,3 +1,6 @@
+-- ARCHIVED SOURCE SQL ONLY: this script contains DROP statements and targets
+-- student_profiles.profile_id. Do not execute it; use the safe import in
+-- database/mysql/psychometric_assessment.sql for the separate app database.
 -- =====================================================================
 -- FINAL PSYCHOMETRIC ASSESSMENT MODULE
 -- Database: Student_Performance_Prediction

@@ -35,22 +35,15 @@ From the repository root on Ubuntu, run:
 bash scripts/setup_ubuntu.sh
 ```
 
-The setup script installs/starts MySQL Server if needed, creates the `Student_Performance_Prediction` database and a dedicated application account, generates local secrets, creates a Python virtual environment, installs backend/frontend dependencies, applies the reviewed Flask-Migrate schema, and imports all three safe assessment SQL files. It then offers to create your first administrator account.
+The setup script installs/starts MySQL Server if needed, creates the separate `studentiq_app` database and a dedicated application account, generates local secrets, creates a Python virtual environment, installs backend/frontend dependencies, applies the reviewed Flask-Migrate schema, and imports all three safe assessment SQL files. It then offers to create your first administrator account.
 
-The script is designed for a fresh local StudentIQ setup. It backs up an existing `backend/.env` before writing a new one. It does **not** drop the database or its tables. The assessment imports use `CREATE TABLE IF NOT EXISTS` and `INSERT IGNORE` to preserve existing rows.
+The script is designed for a fresh local StudentIQ setup. It backs up an existing `backend/.env` before writing a new one and refuses an unversioned StudentIQ schema before changing database credentials. It does **not** drop the database or its tables. The assessment imports use `CREATE TABLE IF NOT EXISTS` and `INSERT IGNORE` to preserve existing rows. The legacy `Student_Performance_Prediction` database is not used or modified by this setup.
 
 ### Database migrations
 
 The Flask application does not create or alter production tables at startup. Apply schema changes explicitly with `flask --app backend.app db upgrade`; migration files live in `migrations/`. Assessment question-bank tables are imported separately from `database/mysql/` after the base migration.
 
-For an existing database created before migrations were added, do not run `db upgrade` blindly: the setup script stops if it finds StudentIQ tables without an `alembic_version` table. First make and verify a restorable MySQL backup, compare every existing ORM table and index with `migrations/versions/53dc7fa208d7_create_initial_studentiq_schema.py`, and confirm the StudentIQ assessment imports are intact. Only when the base schema exactly matches that migration, adopt it without changing data:
-
-```bash
-.venv/bin/flask --app backend.app db stamp 53dc7fa208d7
-.venv/bin/flask --app backend.app db upgrade
-```
-
-If the schema differs, stop and prepare a reviewed, additive migration for the difference; do not stamp an unverified schema. Never use a downgrade to resolve a migration issue without an explicit backup and approval.
+Do not run `db upgrade`, `db stamp`, or any migration against the legacy `Student_Performance_Prediction` database without explicit approval. Its `users.user_id` and `student_profiles.profile_id` schema is not the schema in the current migration. Use `studentiq_app` for the application; keep the legacy database unchanged until a separately reviewed data-transfer plan is approved.
 
 Start both development servers:
 
@@ -84,7 +77,7 @@ In Workbench or the MySQL CLI:
 
 ```sql
 SHOW DATABASES;
-USE Student_Performance_Prediction;
+USE studentiq_app;
 SHOW TABLES;
 SELECT COUNT(*) FROM users;
 ```

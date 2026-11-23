@@ -27,7 +27,7 @@ The supplied project contained React 19, TypeScript, Vite, Tailwind 4, and a lan
 
 Production/local development database is MySQL 8 on Ubuntu. The flow is Browser/React (:5173) → Flask API (:5000) → MySQL Server (`mysqld`, `127.0.0.1:3306`) → MySQL-managed storage (normally `/var/lib/mysql/`). Workbench is the database client, not the server. The frontend does not access MySQL directly.
 
-The database name is `Student_Performance_Prediction`. Flask uses `mysql+pymysql://` and a dedicated app account. SQLite remains limited to isolated backend tests. See `database/mysql/README.md`.
+The application database is `studentiq_app`; the legacy `Student_Performance_Prediction` schema remains separate and untouched. Flask uses `mysql+pymysql://` and a dedicated app account. SQLite remains limited to isolated backend tests. See `database/mysql/README.md`.
 
 ## Added backend — requires deployment/configuration
 

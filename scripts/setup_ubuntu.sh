@@ -4,7 +4,7 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-DB_NAME="Student_Performance_Prediction"
+DB_NAME="studentiq_app"
 DB_USER="studentiq_app"
 DB_HOST="127.0.0.1"
 DB_PORT="3306"
@@ -37,6 +37,19 @@ sudo systemctl enable --now mysql
 sudo systemctl is-active --quiet mysql || fail "MySQL service did not start."
 
 sudo apt-get install -y python3-venv openssl curl
+
+echo "Checking for an unversioned schema in $DB_NAME before setup changes..."
+DB_EXISTS="$(sudo mysql --batch --skip-column-names -e \
+  "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME'")"
+if [[ "$DB_EXISTS" == "1" ]]; then
+  HAS_MIGRATION_HISTORY="$(sudo mysql --batch --skip-column-names -e \
+    "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB_NAME' AND TABLE_NAME='alembic_version'")"
+  APPLICATION_TABLES="$(sudo mysql --batch --skip-column-names -e \
+    "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB_NAME' AND (TABLE_NAME IN ('users','student_profiles','academic_records','study_sessions','skill_entries','study_goals','assessments','questions','assessment_attempts','predictions','reports','revoked_tokens') OR TABLE_NAME REGEXP '^(tech_|beh_|psy_)')")"
+  if [[ "$HAS_MIGRATION_HISTORY" == "0" && "$APPLICATION_TABLES" != "0" ]]; then
+    fail "$DB_NAME already contains StudentIQ tables without Alembic history. No database or application credentials were changed; review the schema and migration plan first."
+  fi
+fi
 
 DB_PASSWORD="$(openssl rand -hex 24)"
 JWT_SECRET="$(openssl rand -hex 48)"
@@ -91,8 +104,8 @@ has_studentiq_tables = bool(tables & application_tables) or any(
 if "alembic_version" not in tables and has_studentiq_tables:
     raise SystemExit(
         "An existing StudentIQ schema has no migration history. Back it up, "
-        "verify its base tables match the initial migration, then follow the "
-        "existing-database adoption instructions in README.md; refusing to alter it."
+        "obtain approval for a reviewed migration plan, and use a separate "
+        "compatible database; refusing to alter it."
     )
 engine.dispose()
 PY

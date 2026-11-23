@@ -3,5 +3,5 @@
 CREATE USER IF NOT EXISTS 'studentiq_app'@'127.0.0.1'
   IDENTIFIED BY 'REPLACE_WITH_A_LONG_RANDOM_PASSWORD';
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
-  ON Student_Performance_Prediction.* TO 'studentiq_app'@'127.0.0.1';
+  ON studentiq_app.* TO 'studentiq_app'@'127.0.0.1';
 FLUSH PRIVILEGES;

@@ -8,7 +8,7 @@
 
 -- =====================================================================
 -- FINAL BEHAVIOURAL ASSESSMENT MODULE
--- Database: Student_Performance_Prediction
+-- Database: studentiq_app
 -- Source: User-provided behavioural assessment SQL dataset
 --
 -- Preserved source content:

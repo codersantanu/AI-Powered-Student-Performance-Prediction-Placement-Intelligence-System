@@ -1,3 +1,6 @@
+-- LEGACY schema script; not part of the current StudentIQ setup.
+-- It expects student_profiles.profile_id and is incompatible with studentiq_app.
+-- Do not run against either database without an explicitly reviewed migration plan.
 use Student_Performance_Prediction;
 CREATE TABLE school_academic_records (
 

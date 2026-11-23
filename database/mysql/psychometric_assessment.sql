@@ -8,7 +8,7 @@
 
 -- =====================================================================
 -- FINAL PSYCHOMETRIC ASSESSMENT MODULE
--- Database: Student_Performance_Prediction
+-- Database: studentiq_app
 -- Source dataset preserved: 15 scenarios, 60 options, 5 dimensions.
 -- The source file contains no option-to-dimension score mappings or scoring
 -- configuration rows. The assessment stays unpublished until mappings are
