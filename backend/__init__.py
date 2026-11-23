@@ -83,7 +83,8 @@ def create_app(config=None):
     from .prediction import prediction_bp
     from .admin import admin_bp
     from .reports import reports_bp
-    for blueprint in (auth_bp, student_bp, assessment_bp, prediction_bp, admin_bp, reports_bp):
+    from .special_assessments import special_assessment_bp
+    for blueprint in (auth_bp, student_bp, assessment_bp, prediction_bp, admin_bp, reports_bp, special_assessment_bp):
         app.register_blueprint(blueprint, url_prefix='/api')
 
     @app.teardown_appcontext
