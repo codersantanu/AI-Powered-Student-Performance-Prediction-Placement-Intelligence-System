@@ -1,4 +1,4 @@
-"""StudentIQ Flask application factory. PostgreSQL is production; SQLite is test-only."""
+"""StudentIQ Flask application factory. MySQL is local/production; SQLite is test-only."""
 import os
 from datetime import timedelta
 from flask import Flask, jsonify, request
@@ -22,6 +22,7 @@ def create_app(config=None):
     app.config.update(
         SQLALCHEMY_DATABASE_URI=database_url or 'sqlite://',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        SQLALCHEMY_ENGINE_OPTIONS={'pool_pre_ping': True, 'pool_recycle': 1800},
         MAX_CONTENT_LENGTH=5 * 1024 * 1024 + 64 * 1024,
         JWT_SECRET_KEY=(config or {}).get('JWT_SECRET_KEY', os.getenv('JWT_SECRET_KEY', '')),
         JWT_ACCESS_TOKEN_EXPIRES=timedelta(minutes=30),
