@@ -394,9 +394,12 @@ def _score_reflection(kind, attempt, questions, answers, assessment):
     review = []
     choice_summaries = []
     for question, selected_index in zip(questions, answers):
-        selected = question["options"][selected_index]
-        option_id = selected["id"]
-        if kind == "behavioural":
+        selected = question["options"][selected_index] if selected_index is not None else None
+        option_id = selected["id"] if selected else None
+        if selected is None:
+            scores = []
+            interpretation = None
+        elif kind == "behavioural":
             scores = _rows(
                 "SELECT dimension_id, score FROM beh_option_dimension_scores WHERE option_id=:id",
                 {"id": option_id},
@@ -420,11 +423,11 @@ def _score_reflection(kind, attempt, questions, answers, assessment):
         detail = interpretation["interpretation"] if interpretation else ""
         review.append({
             "question": question["question"],
-            "selected": selected["text"],
+            "selected": selected["text"] if selected else "Not answered",
             "interpretation": detail,
             "correct": None,
         })
-        if kind == "behavioural" and question.get("type") == "categorical":
+        if selected and kind == "behavioural" and question.get("type") == "categorical":
             choice_summaries.append({
                 "question": question["question"],
                 "choice": selected["text"],
@@ -513,14 +516,25 @@ def submit_assessment(user, kind):
     if already_submitted:
         return jsonify(_saved_result(kind, attempt)), 200
     assessment = _assessment(kind, int(attempt["assessment_id"]))
+    started_at = attempt.get("started_at")
+    if isinstance(started_at, str):
+        try:
+            started_at = datetime.fromisoformat(started_at)
+        except ValueError:
+            started_at = None
+    if started_at is not None:
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
+        allowed = int(assessment["duration"]) * 60 + 30
+        if elapsed > allowed:
+            raise ApiError("The assessment time limit has ended. Your answers were not accepted.", 409)
     questions = _questions(kind, int(attempt["assessment_id"]))
     answers = data.get("answers")
     if not isinstance(answers, list) or len(answers) != len(questions):
         raise ApiError("Submit one option index for every question. Use null only for unanswered technical questions.")
     validated = []
     for q, choice in zip(questions, answers):
-        if kind != "technical" and choice is None:
-            raise ApiError("Please answer every question before submitting this assessment.")
         if choice is None:
             validated.append(None)
             continue
