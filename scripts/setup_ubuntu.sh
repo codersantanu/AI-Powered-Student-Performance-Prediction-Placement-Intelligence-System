@@ -27,7 +27,7 @@ const supported = major > 22 || (major === 22 && minor >= 12) ||
 if (!supported) process.exit(1);
 JS
 
-if ! command -v mysql >/dev/null || ! systemctl list-unit-files | grep -q '^mysql.service'; then
+if ! command -v mysql >/dev/null || ! systemctl cat mysql.service >/dev/null 2>&1; then
   echo "Installing Ubuntu MySQL Server..."
   sudo apt-get update
   sudo apt-get install -y mysql-server
@@ -35,6 +35,11 @@ fi
 
 sudo systemctl enable --now mysql
 sudo systemctl is-active --quiet mysql || fail "MySQL service did not start."
+
+if ! python3 -m venv --help >/dev/null 2>&1; then
+  sudo apt-get install -y python3-venv
+fi
+command -v openssl >/dev/null || fail "Install openssl to generate local secrets."
 
 DB_PASSWORD="$(openssl rand -hex 24)"
 JWT_SECRET="$(openssl rand -hex 48)"
@@ -117,7 +122,7 @@ SELECT CONCAT('psychometric questions: ', COUNT(*)) FROM psy_questions;
 SQL
 
 cat > .env.local <<'ENV'
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://127.0.0.1:5000/api
 ENV
 
 echo
