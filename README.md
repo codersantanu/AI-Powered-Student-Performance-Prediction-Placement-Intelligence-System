@@ -1,68 +1,130 @@
 # StudentIQ
 
-A responsive student academic analytics application built with React, TypeScript, Vite, Tailwind CSS, React Router DOM, Recharts, Lucide, and Axios.
+A student academic analytics and placement-readiness application built with React, TypeScript, Vite, Tailwind CSS and a Flask API.
 
-The landing page is preserved. The application now includes ten student dashboard modules, five administrator modules, frontend-only account screens, and an additive Flask backend in `backend/`.
+## Architecture: local MySQL on Ubuntu
 
-## Frontend
+This project follows the local client/server layout:
 
-- Install dependencies: `npm install`
-- Start development: `npm run dev`
-- Check types: `npx tsc --noEmit`
-- Build production: `npm run build`
-- Preview production: `npm run preview`
-
-Without `VITE_API_URL`, protected routes redirect to Login. Explicit sample previews are available at `/student/dashboard?preview=1` and `/admin/dashboard?preview=1`. Preview records are clearly labeled and do not represent real accounts or ML predictions.
-
-## Backend
-
-The Flask API is provided in `backend/`; it supports SQLite for local development and PostgreSQL for production, with JWT authentication.
-
-See `IMPLEMENTATION.md` for:
-
-- Created and modified files
-- API endpoints and integration status
-- PostgreSQL setup and environment variables
-- Secure administrator provisioning
-- Real-dataset model training
-- Deployment requirements and end-to-end testing instructions
-
-No trained model or real dataset was supplied. Predictions remain unavailable until a model trained on a real consented dataset is connected. No synthetic model metrics or fabricated student records are presented as real.
-
-### Run the full stack locally (Windows PowerShell)
-
-For local development, the API can use SQLite; PostgreSQL remains the production database. Install the backend requirements once:
-
-```powershell
-py -3.14 -m pip install -r backend\requirements.txt
+```text
+Browser (React/Vite :5173)
+        |
+        | HTTP / JSON
+        v
+Flask API (:5000)
+        |
+        | MySQL protocol / TCP
+        v
+MySQL Server (mysqld :3306)
+        |
+        v
+MySQL data directory (Ubuntu default: /var/lib/mysql/)
 ```
 
-In one terminal, start the API with a local database and a newly generated JWT secret:
+- MySQL Workbench is the database client. It is not the database server.
+- MySQL Server runs as the Ubuntu `mysql.service` background service.
+- Flask connects to `127.0.0.1:3306` using PyMySQL.
+- React never connects directly to MySQL; browser clients must only call the Flask API.
+- The database engine manages its storage files under its configured data directory. Do not edit files in `/var/lib/mysql/` manually.
 
-```powershell
-$env:DATABASE_URL = "sqlite:///studentiq.db"
-$env:JWT_SECRET_KEY = py -3.14 -c "import secrets; print(secrets.token_hex(32))"
-$env:CORS_ORIGINS = "http://127.0.0.1:5173"
-py -3.14 -m flask --app backend.wsgi run --host 127.0.0.1 --port 5000
+## Ubuntu setup
+
+1. Install/start MySQL Server and open Workbench:
+
+   ```bash
+   sudo apt update
+   sudo apt install mysql-server
+   sudo systemctl enable --now mysql
+   sudo systemctl status mysql
+   ```
+
+2. In MySQL Workbench, connect to `127.0.0.1`, port `3306`, using an administrative account. Run `database/mysql/00_create_database.sql`, then edit and run `database/mysql/01_create_app_user.sql` to create the least-privilege application user.
+
+3. Create a Python virtual environment and install backend dependencies:
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r backend/requirements.txt
+   ```
+
+4. Copy `backend/.env.example` to `backend/.env`. Set a new JWT secret and the MySQL connection string:
+
+   ```env
+   DATABASE_URL=mysql+pymysql://studentiq_app:YOUR_PASSWORD@127.0.0.1:3306/Student_Performance_Prediction?charset=utf8mb4
+   JWT_SECRET_KEY=YOUR_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS
+   CORS_ORIGINS=http://localhost:5173,http://localhost:4173
+   ```
+
+   URL-encode special characters in the database password.
+
+5. Start Flask once so SQLAlchemy creates the app's base tables, including `users` and `student_profiles`:
+
+   ```bash
+   python -m backend.app
+   ```
+
+6. Run the assessment imports in Workbench after the base tables exist. The source SQL was adapted to the real `student_profiles.id` primary key; technical table names use the `tech_` prefix to avoid the existing generic Flask tables. Review each SQL script and back up the database before applying it.
+
+7. In another terminal, start the frontend:
+
+   ```bash
+   npm install
+   VITE_API_URL=http://localhost:5000/api npm run dev
+   ```
+
+   Open `http://localhost:5173`.
+
+## Useful MySQL checks
+
+```bash
+sudo systemctl status mysql
+sudo systemctl start mysql
+sudo systemctl restart mysql
+sudo ss -ltnp | grep 3306
 ```
 
-In a second terminal, point Vite at the API and start the frontend:
+In Workbench or the MySQL CLI:
 
-```powershell
-$env:VITE_API_URL = "http://127.0.0.1:5000/api"
-npm run dev -- --host 127.0.0.1
+```sql
+SHOW DATABASES;
+USE Student_Performance_Prediction;
+SHOW TABLES;
+SELECT COUNT(*) FROM users;
 ```
 
-Open `http://127.0.0.1:5173`. The SQLite database is created automatically. Register a student account to use the student workspace; no administrator account is created automatically.
+The native Ubuntu data directory is commonly `/var/lib/mysql/`; use SQL or Workbench to work with data, not direct file edits.
 
-## Browser tests
+## Frontend commands
 
-Install the browser with `npx playwright install --with-deps chromium`.
+```bash
+npm install
+npm run dev
+npx tsc --noEmit
+npm run build
+npm run preview
+```
 
-- `npx playwright test` — starts Vite automatically and runs all browser suites.
-- `npx tsc --noEmit` — checks frontend types.
-- `PYTHONPATH=/path/to/backend/deps python -m pytest backend/tests -q` — runs isolated Flask tests.
+Preview routes are explicitly sample-only: `/student/dashboard?preview=1` and `/admin/dashboard?preview=1`. Preview data is not real student data and must not be used as model input.
 
-For mocked authentication-flow tests, start Vite with `VITE_API_URL=http://localhost:5000/api` on port 5174, then run `TEST_URL=http://localhost:5174 npx playwright test tests/auth-flow.mjs`.
+## Backend and tests
 
-The tests cover responsive layouts, navigation, dashboard tabs, profile editing, study-session and portfolio CRUD, assessments, goals, PDF downloads, mobile drawer behavior, theme switching, registration feedback, mocked login redirects, and logout. Mocked tests do not prove live backend connectivity.
+- Backend dependencies: `backend/requirements.txt`
+- Environment template: `backend/.env.example`
+- API entry point: `backend.app`
+- Run tests: `python -m pytest backend/tests -q` (the test fixture uses isolated SQLite; production uses MySQL)
+- API health: `GET /api/health`
+
+## ML model integration status
+
+A candidate Random Forest pickle was supplied separately. Its serialized metadata indicates a scikit-learn 1.6.1 model with 17 named features. The project dependency is pinned to scikit-learn 1.6.1, but the pickle has not yet been executed or verified. Do not load pickle files from an untrusted source: unpickling can execute code.
+
+The existing prediction API uses a different eight-feature contract. Four features in the supplied model are engineered values, and the original training notebook/script is needed to reproduce their formulas exactly. Until that feature engineering and target-label meaning are confirmed, the API must not generate a prediction by guessing formulas or reporting invented model metrics.
+
+## Assessment integration status
+
+The project includes the existing generic assessment API and the supplied technical, behavioural and psychometric SQL designs. The SQL imports must be applied after the base Flask tables exist. The specialised behavioural and psychometric score interpretation still needs to be connected to student-facing endpoints and the frontend before those two tests are fully live.
+
+## Production checklist
+
+Before exposing the site publicly: use HTTPS, secure JWT cookies/CSRF where appropriate, a non-root MySQL application user, secrets stored outside source control, backups, database migrations, rate limiting, and verified model evaluation. Behavioural/psychometric results are reflective assessments, not clinical diagnoses.
