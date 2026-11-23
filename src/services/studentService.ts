@@ -1,0 +1,23 @@
+import type { AcademicRecord, DashboardData, Profile, ReportCatalogItem, ReportData, SkillEntry, StudyGoal, StudySession } from '../types';
+export const studentService = {
+  dashboard: () => import('./api').then(({ api }) => api.get<DashboardData>('/student/dashboard').then((r) => r.data)),
+  profile: () => import('./api').then(({ api }) => api.get<Profile>('/student/profile').then((r) => r.data)),
+  updateProfile: (data: Partial<Profile>) => import('./api').then(({ api }) => api.put<Profile>('/student/profile', data).then((r) => r.data)),
+  uploadProfilePhoto: (photo: File) => import('./api').then(({ api }) => { const body = new FormData(); body.append('photo', photo); return api.post<Profile>('/student/profile/photo', body).then((r) => r.data); }),
+  profilePhoto: () => import('./api').then(({ api }) => api.get<Blob>('/student/profile/photo', { responseType: 'blob' }).then((r) => URL.createObjectURL(r.data))),
+  academicRecords: () => import('./api').then(({ api }) => api.get<AcademicRecord[]>('/student/academic-records').then((r) => r.data)),
+  studySessions: () => import('./api').then(({ api }) => api.get<StudySession[]>('/student/study-sessions').then((r) => r.data)),
+  addSession: (data: Omit<StudySession, 'id'>) => import('./api').then(({ api }) => api.post<StudySession>('/student/study-sessions', data).then((r) => r.data)),
+  updateSession: (id: number, data: Partial<StudySession>) => import('./api').then(({ api }) => api.put<StudySession>(`/student/study-sessions/${id}`, data).then((r) => r.data)),
+  deleteSession: (id: number) => import('./api').then(({ api }) => api.delete(`/student/study-sessions/${id}`)),
+  skills: () => import('./api').then(({ api }) => api.get<SkillEntry[]>('/student/skills').then((r) => r.data)),
+  addSkill: (data: Omit<SkillEntry, 'id'>) => import('./api').then(({ api }) => api.post<SkillEntry>('/student/skills', data).then((r) => r.data)),
+  updateSkill: (id: number, data: Partial<SkillEntry>) => import('./api').then(({ api }) => api.put<SkillEntry>(`/student/skills/${id}`, data).then((r) => r.data)),
+  deleteSkill: (id: number) => import('./api').then(({ api }) => api.delete(`/student/skills/${id}`)),
+  goals: () => import('./api').then(({ api }) => api.get<StudyGoal[]>('/student/goals').then((r) => r.data)),
+  addGoal: (data: Omit<StudyGoal, 'id'>) => import('./api').then(({ api }) => api.post<StudyGoal>('/student/goals', data).then((r) => r.data)),
+  updateGoal: (id: number, data: Partial<StudyGoal>) => import('./api').then(({ api }) => api.put<StudyGoal>(`/student/goals/${id}`, data).then((r) => r.data)),
+  deleteGoal: (id: number) => import('./api').then(({ api }) => api.delete(`/student/goals/${id}`)),
+  reports: () => import('./api').then(({ api }) => api.get<ReportCatalogItem[]>('/student/reports').then((r) => r.data)),
+  report: (key: string, semester?: number) => import('./api').then(({ api }) => api.get<ReportData>(`/student/reports/${encodeURIComponent(key)}`, { params: semester ? { semester } : {} }).then((r) => r.data)),
+};

@@ -1,0 +1,23 @@
+export type Role = 'student' | 'admin';
+export interface User { id: number; name: string; email: string; role: Role; }
+export interface Profile { id: number; name: string; email: string; studentId: string; college: string; department: string; degree: string; specialization: string; phone: string; address: string; dateOfBirth: string; admissionYear: number | null; academicYear: string; currentSemester: number; expectedGraduationYear: number | null; skills: string[]; careerInterests: string[]; preferredRoles: string[]; shortTermGoal: string; longTermGoal: string; preferredTechnologies: string[]; photoAvailable: boolean; accountStatus: 'Active' | 'Inactive'; completion: number; missingInformation: string[]; }
+export interface Topic { name: string; score: number | null; description: string; improvement: string; revisionTopics: string[]; }
+export interface Subject { name: string; totalMarks: number; obtainedMarks: number | null; previousMarks: number | null; topics: Topic[]; }
+export interface AcademicRecord { id: number; semester: number; academicYear: string; sgpa: number | null; attendance: number | null; classesAttended: number | null; totalClasses: number | null; activeBacklogs: number; clearedBacklogs: number; class10: number | null; class12: number | null; subjects: Subject[]; }
+export interface StudySession { id: number; subject: string; date: string; duration: number; notes: string; }
+export interface SkillEntry { id: number; category: 'programming' | 'technical' | 'internship' | 'certification' | 'project'; title: string; organization: string; description: string; level: string; startDate: string; endDate: string; url: string; secondaryUrl: string; projectCategory: string; technologies: string[]; }
+export interface AssessmentQuestion { id: number; text: string; options: string[]; category: string; difficulty: string; explanation?: string; }
+export interface Assessment { id: number; title: string; category: string; difficulty: string; duration: number; questionCount: number; dueAt: string | null; }
+export interface AssessmentAttempt { id: number; assessmentId: number; startedAt: string; submittedAt: string | null; duration: number; questions: AssessmentQuestion[]; result: AssessmentResult | null; }
+export interface AssessmentResult { id: number; assessmentId: number; title: string; category: string; score: number | null; correct: number; total: number; date: string; categories: { name: string; score: number }[]; review: { question: string; selected: string; correctAnswer: string; explanation: string; correct: boolean }[]; }
+export interface ModelMetrics { accuracy: number; precision: number; recall: number; f1: number; confusionMatrix: number[][]; }
+export interface ModelInfo { available: boolean; selectedModel: string; target: string; version: string; metrics: ModelMetrics | null; dataset: { name: string; rows: number; features: number; train: number; validation: number; test: number; source: string } | null; calibrated: boolean; trainedAt: string; }
+export interface Prediction { id: number; target: string; outcome: string; passProbability: number | null; failProbability: number | null; confidence: number | null; modelVersion: string; createdAt: string; inputs: Record<string, number>; riskFactors: string[]; }
+export interface Recommendation { id: string; category: string; title: string; description: string; priority: 'high' | 'medium' | 'low'; action: string; resourceUrl?: string; }
+export interface StudyGoal { id: number; title: string; target: number; completed: number; period: string; }
+export interface DashboardData { profile: Profile | null; academicRecords: AcademicRecord[]; studySessions: StudySession[]; assessmentResults: AssessmentResult[]; upcomingAssessments: Assessment[]; prediction: Prediction | null; recommendations: Recommendation[]; goals: StudyGoal[]; }
+export interface ReportData { key: string; title: string; semester: number | null; generatedAt: string; data: Record<string, unknown>; }
+export interface ReportCatalogItem { key: string; title: string; description: string; available: boolean; }
+export interface AdminStudent { id: number; name: string; email: string; studentId: string; department: string; academicYear: string; currentSemester: number; cgpa: number | null; attendance: number | null; active: boolean; }
+export interface AdminQuestion { id: number; text: string; options: string[]; correctIndex: number; category: string; difficulty: string; explanation: string; }
+export interface AdminOverview { students: number; activeStudents: number; averageCgpa: number | null; averageAttendance: number | null; records: number; assessments: number; predictions: number; }

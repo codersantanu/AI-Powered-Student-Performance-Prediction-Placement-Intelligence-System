@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: studentiq
+      POSTGRES_USER: studentiq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - studentiq_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studentiq -d studentiq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  studentiq_pgdata:

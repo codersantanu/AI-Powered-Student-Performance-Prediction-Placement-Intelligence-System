@@ -1,0 +1,26 @@
+from collections import defaultdict
+from .models import Assessment, Question
+
+
+def result_public(attempt):
+    result = attempt.result or {}
+    assessment = attempt.assessment
+    return {'id': attempt.id, 'assessmentId': attempt.assessment_id, 'title': assessment.title, 'category': assessment.category, 'date': attempt.submitted_at.isoformat() if attempt.submitted_at else None, **result}
+
+
+def score_attempt(attempt, questions):
+    answers = attempt.answers
+    psychometric = questions[0].category == 'Psychometric' if questions else False
+    correct = 0
+    category_results = defaultdict(lambda: {'correct': 0, 'total': 0, 'responses': 0})
+    review = []
+    for question, answer in zip(questions, answers):
+        is_correct = answer == question.correct_index
+        correct += int(is_correct)
+        category = category_results[question.category]
+        category['total'] += 1
+        category['correct'] += int(is_correct)
+        category['responses'] += int(answer == 0)
+        review.append({'question': question.text, 'selected': question.options[answer] if answer is not None else 'Not answered', 'correctAnswer': question.options[question.correct_index], 'explanation': question.explanation, 'correct': is_correct})
+    categories = [{'name': name, 'score': round(values['responses'] / values['total'] * 100) if psychometric else round(values['correct'] / values['total'] * 100)} for name, values in category_results.items()]
+    return {'score': None if psychometric else round(correct / len(questions) * 100), 'correct': correct, 'total': len(questions), 'categories': categories, 'review': review, 'note': 'Self-assessment reflection only; not a clinical or diagnostic test.' if psychometric else 'Scored using the official question bank.'}
