@@ -1,10 +1,11 @@
 import click
+from pathlib import Path
 from dotenv import load_dotenv
 from . import create_app
 from .extensions import db
 from .models import User
 
-load_dotenv()
+load_dotenv(Path(__file__).with_name('.env'))
 app = create_app()
 
 
