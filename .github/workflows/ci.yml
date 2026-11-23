@@ -18,6 +18,10 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - name: Install backend dependencies
         run: pip install -r backend/requirements.txt
+      - name: Check Python syntax
+        run: python -m compileall -q backend
+      - name: Check Ubuntu setup scripts
+        run: bash -n scripts/setup_ubuntu.sh scripts/start_dev.sh
       - name: Run backend tests
         env:
           JWT_SECRET_KEY: ci-only-secret-key-with-more-than-32-characters
